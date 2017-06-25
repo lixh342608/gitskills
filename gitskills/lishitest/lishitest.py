@@ -72,14 +72,15 @@ class lishitest:
             
     def login(self,username,pwd):
         self.driver.get('https://jr.yatang.cn/NewLogin/index/referer/')
-        self.persi_ele('//*[@id="username"]').send_keys(username)
+        self.driver.switch_to.frame(0)
+        self.persi_ele('//*[@id="js-username"]').send_keys(username)
         
-        self.persi_ele('//*[@id="password"]').send_keys(pwd)
+        self.persi_ele('//*[@id="js-password"]').send_keys(pwd)
         
-        yzm=img_set(self.driver)
-        self.persi_ele('//*[@id="sendnumber"]').send_keys(yzm)
+        '''yzm=img_set(self.driver)
+        self.persi_ele('//*[@id="sendnumber"]').send_keys(yzm)'''
         
-        self.persi_ele('//*[@id="button"]').click()
+        self.persi_ele('//*[@id="js-login"]').click()
         
         sleep(2)
         if self.driver.title=='雅堂金融—专注于家具产业领域供应链金融服务平台！':
@@ -130,7 +131,7 @@ class lishitest:
             ti_list=ti_text.split(':')
             ti_sum=int(ti_list[0])*3600+int(ti_list[1])*60+int(ti_list[2])
             #ti_sum=int(ti_list[2])
-            #print('距离投秒时间还有%d秒' % ti_sum)
+            print('距离投秒时间还有%d秒' % ti_sum)
             if ti_sum>600:
                 sleep(300)
                 continue

@@ -9,7 +9,6 @@ from time import sleep
 from selenium.common.exceptions import NoSuchElementException
 import re,pickle,os
 from time_out import waittime
-from img_set import img_set
 from tkinter import *
 import tkinter.messagebox
 
@@ -77,8 +76,6 @@ class lishitest:
         
         self.persi_ele('//*[@id="js-password"]').send_keys(pwd)
         
-        '''yzm=img_set(self.driver)
-        self.persi_ele('//*[@id="sendnumber"]').send_keys(yzm)'''
         
         self.persi_ele('//*[@id="js-login"]').click()
         

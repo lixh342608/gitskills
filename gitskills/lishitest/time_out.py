@@ -55,12 +55,15 @@ class waittime:
 if __name__=="__main__":
     from selenium import webdriver
     
-    driver=webdriver.Chrome()
-    driver.get("http://www.baidu.com")
+    driver=webdriver.Chrome('C:/chromedriver')
+    driver.get('https://jr.yatang.cn/NewLogin/index/referer/')
     driver.maximize_window()
-    wait=waittime(driver,30)
-    ele=wait.get_ele('xpath','//*[@id="ss"]')
+    driver.switch_to.frame(0)
+    ele=driver.find_element_by_xpath('//*[@id="js-username"]').send_keys('月光宝盒')
+    print(ele)
+    '''wait=waittime(driver,30)
+    wait.get_ele('xpath','//*[@id="js-username"]').send_keys('月光宝盒')
     if ele==0:
         driver.quit()
     else:
-        ele.send_keys("cheese")
+        ele.send_keys("cheese")'''

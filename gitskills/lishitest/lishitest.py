@@ -80,16 +80,11 @@ class lishitest:
         self.persi_ele('//*[@id="js-login"]').click()
         
         sleep(2)
-        if self.driver.title=='雅堂金融—专注于家具产业领域供应链金融服务平台！':
+        login_ele=self.wait.get_ele('xpath','//*[@id="top"]/div[1]/div/div[2]/a[2]')
             
-            self.driver.get('https://jr.yatang.cn/Financial/welfare')
-            sleep(0.5)
-        else:
-            
-            
+        if login_ele.text=='免费注册':
             self.login(username,pwd)
-            
-
+        
 
 
     def wrrtenum(self,numer):
@@ -114,7 +109,10 @@ class lishitest:
         pay_ele.send_keys(pay_pwd)
         commit_ele=self.persi_ele(self.commit_xpath)
         commit_ele.click()
-        sleep(200)
+        
+        sleep(10)
+        check_ele=self.persi_ele('/html/body/div[5]/div/div/div/div[1]/div[1]/b')
+        print(check_ele.text)
 
     def timeset(self,username,pwd):
         self.set_xpath()
@@ -122,8 +120,10 @@ class lishitest:
         while True:
             self.driver.refresh()
             login_ele=self.wait.get_ele('xpath','//*[@id="top"]/div[1]/div/div[2]/a[2]')
+            
             if login_ele.text=='免费注册':
                 self.login(username,pwd)
+                self.driver.get('https://jr.yatang.cn/Financial/welfare')
             ti_text=self.wait.get_ele('class',self.time_class).text
             ti_list=ti_text.split(':')
             ti_sum=int(ti_list[0])*3600+int(ti_list[1])*60+int(ti_list[2])

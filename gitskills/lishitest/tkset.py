@@ -123,19 +123,28 @@ class q_mon:
             
             ele_box=self.persi_ele('hb_xl_box','class')
             try:
-                ele_hb=ele_box.find_elements_by_class_name('hb_check_list')[0]
-                mz=ele_hb.text.split()[0]
-                if mz==self.par_sex+'00元':
-                    ele_box.click()
-                    self.biaochu()
+                ele_box.find_element_by_class_name('hb_check_list').click()
+               
+
+                yq_hb=self.par_sex+'00元'
+                print(yq_hb)
+                if hbxs_ele.text==yq_hb:
+                    #if tkinter.messagebox.askokcancel('提示', '是否继续'):
+                            
+                    print(hbxs_ele.text)
+                    #self.biaochu()
                     sleep(10)
                     self.q_mont()
+                
                 else:
-                    print('可用红包不匹配预期！')
+                    self.q_mont()
+                
             except:
-                print('没有红包可用！')
+                print('没有找到可用红包，重新投资！')
+                self.q_mont()
         else:
-            print('没有红包可用！')
+            print('没有找到可用红包，重新投资！')
+            self.q_mont()
         
 
     def biaochu(self):
@@ -143,7 +152,7 @@ class q_mon:
         self.persi_ele('//*[@id="ppay"]').send_keys(self.paypwd)
         self.persi_ele('//*[@id="button"]').click()
 if __name__=='__main__':
-    qiang=q_mon('夜夜难眠','ri123654','aa123..','10000','10')
+    qiang=q_mon('月光宝盒','ri123654','aaa111','8000','2')
     qiang.q_mont()
     
 

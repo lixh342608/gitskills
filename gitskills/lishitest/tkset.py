@@ -7,11 +7,23 @@ Created on 2017年6月16日
 from selenium import webdriver
 from time import sleep
 from selenium.common.exceptions import NoSuchElementException
-import pickle
+import pickle,threading,queue
 from time_out import waittime
 from tkinter import *
 import tkinter.messagebox
 import json,requests
+
+def writcol(col):
+    with open("yuelocation.pic","wb") as f:
+        pickle.dump(col, f)
+def loadcol():
+    try:
+        with open("yuelocation.pic","rb") as f:
+            col=pickle.load(f)   
+            return col     
+    except IOError:
+        return 0
+
 #使用requests实现查询第一页期限一个月，待投金额大于X，利率最高的标
 def reque_num(main_num):
     sleep(1.5)
@@ -25,7 +37,9 @@ def reque_num(main_num):
     data['page_href']='/Financial/getAssetList?&p=1'
     resq=requests.post(url,data,headers)
     t_text=json.loads(resq.text)['list']
+    
     t_text=[i for i in t_text if i['showday']=='1个月' and i['remain'] > main_num]
+    
     apr=0
     apr_num=0
     for j in t_text:
@@ -60,18 +74,28 @@ def reque_num(main_num):
             apr_num=j['id']
     
     return apr_num'''
-class q_mon:
-    def __init__(self,username,pwd,pay_pwd,par_num,par_sex):
-        self.username=username
-        self.pwd=pwd
-        self.paypwd=pay_pwd
-        self.par_num=par_num
-        self.par_sex=par_sex
-        self.driver=webdriver.Chrome('C:/chromedriver')
+class q_mon(threading.Thread):
+    def __init__(self,eve,msg_var,hb_var,commit_bt):
+        super(q_mon,self).__init__()
+        self.eve=eve
+        self.msg_var=msg_var
+        self.hb_var=hb_var
+        self.commit_bt=commit_bt
+        self.yuecol=loadcol()
+        self.username=self.yuecol[0]#用户名
+        self.pwd=self.yuecol[1]#用户密码
+        self.paypwd=self.yuecol[2]#支付密码
+        self.par_num=int(self.yuecol[3])#红包倍数
+        self.par_sex=int(self.yuecol[4])#红包面值'''
+        self.driver=webdriver.PhantomJS()
+        #self.driver=webdriver.Chrome('C:/chromedriver')
         self.driver.get('https://jr.yatang.cn/Financial/asset')
         
         self.driver.maximize_window()
-        self.wait=waittime(self.driver,10)
+        self.wait=waittime(self.driver,30)
+    def run(self):
+        self.eve.wait()
+        self.q_mont()
     def persi_ele(self,by_vale,byse='xpath',col=1000):
         y_col=0
         while y_col<=col:
@@ -96,64 +120,194 @@ class q_mon:
         
         
         self.persi_ele('//*[@id="js-login"]').click()
-        
         sleep(2)
-        if self.driver.title=='雅堂金融—专注于家具产业领域供应链金融服务平台！':
-            pass
-            
-        else:
+        login_ele=self.wait.get_ele('xpath','//*[@id="top"]/div[1]/div/div[2]/a[2]')
+        if login_ele and login_ele.text=='免费注册':
             self.login()
+        else:
+            self.msg_var.set('登陆成功')
             
     def q_mont(self):
-        main_num=int(self.par_num)*int(self.par_sex)
+        if not self.eve.is_set():
+            self.driver.quit()
+            self.eve.wait()
+        #检测登录
+        self.msg_var.set("检测登录状态...")
         login_ele=self.wait.get_ele('xpath','//*[@id="top"]/div[1]/div/div[2]/a[2]')
         if login_ele.text=='免费注册':
+            self.msg_var.set("检测到未登录状态，正在准备登录")
             self.login()
-        apr_num=reque_num(main_num)
+        self.msg_var.set("正在寻找可投资的月标...")
+        #找符合要求的月标ID
+        #apr_num=reque_num(self.par_num*parsex)
+        #循环直到找到为止
+        apr_num=0
         while int(apr_num)==0:
-            print('没有可投资项目，重新刷新列表中！')
+            if not self.eve.is_set():
+                self.driver.quit()
+                self.eve.wait()
+            self.msg_var.set("小主莫慌，宝宝努力抢标中...")
+            parsex=self.par_sex
+            main_num=self.par_num*parsex
             apr_num=reque_num(main_num)
-        
+            if int(apr_num)==0 and self.par_sex>100:
+                parsex=100
+                main_num=self.par_num*parsex
+                apr_num=reque_num(main_num)
+
+        self.msg_var.set("抢标成功，准备投标中...")
         url='https://jr.yatang.cn/Invest/ViewBorrow/ibid/%s' % apr_num
         self.driver.get(url)
         self.persi_ele('//*[@id="amountt"]').send_keys(main_num)
+        self.msg_var.set("选择红包中...")
+        #查找红包选框
         hbxs_ele=self.persi_ele('hbje_xs','class',11)
         if hbxs_ele:
             hbxs_ele.click()
-            
-            ele_box=self.persi_ele('hb_xl_box','class')
+            #找到红包盒子
+            ele_box=self.persi_ele('hb_xl_box','class') 
             try:
-                ele_box.find_element_by_class_name('hb_check_list').click()
-               
-
-                yq_hb=self.par_sex+'00元'
-                print(yq_hb)
-                if hbxs_ele.text==yq_hb:
-                    #if tkinter.messagebox.askokcancel('提示', '是否继续'):
-                            
-                    print(hbxs_ele.text)
-                    #self.biaochu()
-                    sleep(10)
-                    self.q_mont()
+                #找到盒子中所有红包
+                hb_list=ele_box.find_elements_by_class_name('hb_check_list')
                 
+                for hb in hb_list:
+                    hb_li=hb.text.replace('元','').split('\n')
+                    #如果红包等于预期红包且投资金额等于预期投资金额则选中该红包
+                    if int(hb_li[0])==parsex and int(hb_li[1])==main_num:
+                        hb.find_element_by_class_name('hbcheck_1').click()
+                    else:
+                        continue
+                    if hbxs_ele.text=='%d元' % parsex:
+                        self.msg_var.set("红包已准备完毕")
+                        #if tkinter.messagebox.askyesno('报告','请小主定夺！'):
+                        #print("投资测试")
+                        self.biaochu()
+                        break
+                          
+                                    
                 else:
-                    self.q_mont()
+                    if self.par_sex>100 and tkinter.messagebox.askyesno('报告','没有找到%d元面值红包，改用面值%d元红包投资？' % (self.par_sex,self.par_sex-100)):
+                    #if 
+                    
+                        self.par_sex-=100
+                        self.hb_var.set(self.par_sex)
+                    else:
+                        tkinter.messagebox.showinfo("通知：","当前没有符合您需要的红包，请重新设置投资信息！")
+                        self.eve.wait()
+                        self.driver.quit()
+                        return
+                self.q_mont()
+                
                 
             except:
-                print('没有找到可用红包，重新投资！')
+                self.msg_var.set('没有找到可用红包，重新投资！')
                 self.q_mont()
         else:
-            print('没有找到可用红包，重新投资！')
+            self.msg_var.set('没有找到可用红包，重新投资！')
             self.q_mont()
         
 
     def biaochu(self):
         self.persi_ele('//*[@id="incheck"]').click()
-        self.persi_ele('//*[@id="ppay"]').send_keys(self.paypwd)
-        self.persi_ele('//*[@id="button"]').click()
+        pay_ele=self.persi_ele('//*[@id="ppay"]',col=10)
+        if pay_ele!=None:
+        
+            pay_ele.send_keys(self.paypwd)
+            self.persi_ele('//*[@id="button"]').click()
+            tkinter.messagebox.showinfo('报告','宝宝能做的只有这些了，祝你好远！')
+    def chnge_bt(self):
+        self.commit_bt['state']=NORMAL
+        self.commit_bt["text"]="继续投资"        
+class yuebiao_gui:
+    def __init__(self):
+        self.root=Tk()
+        width_n=self.root.winfo_screenwidth()/2-200
+        height_n=self.root.winfo_screenheight()/2-200
+        self.root.geometry('400x400+%d+%d' % (int(width_n),int(height_n)))
+
+
+    
+
+    def main_go(self):
+        
+        col_list=loadcol()
+        if col_list==0:
+            col_list=["","","","",""]
+
+        def click_on():
+            commit_bt['state']=DISABLED
+            username=username_var.get()
+            pwd=pwd_var.get()
+            paypwd=paypwd_var.get()
+            pranum=pranum_var.get()
+            hbset=hb_var.get()
+            if username and pwd and paypwd and pranum and hbset:
+                yue_col=[username,pwd,paypwd,pranum,hbset]
+                writcol(yue_col)
+                pack_var.set('正在初始化...')
+                self.eve=threading.Event()
+                self.tasker=q_mon(self.eve,pack_var,hb_var,commit_bt)
+                self.tasker.setDaemon(True)
+                self.tasker.start()
+                sleep(2)
+                self.eve.set()
+            else:
+                tkinter.messagebox.askokcancel("提示","所有项不可为空!")
+     
+        def stop_tb():
+            self.eve.clear()
+            commit_bt['state']=NORMAL
+                    
+        
+        Label(self.root,width=7).grid(row=0,column=0)
+        Label(self.root).grid(row=1,column=0)
+        Label(self.root).grid(row=3,column=0)
+        Label(self.root).grid(row=5,column=0)
+        Label(self.root).grid(row=7,column=0)
+        Label(self.root).grid(row=9,column=0)
+        
+        Label(self.root,text="雅堂帐户:",bd=5).grid(row=0,column=1)
+        Label(self.root,text="帐户密码:",bd=5).grid(row=2,column=1)
+        Label(self.root,text="交易密码:",bd=5).grid(row=4,column=1)
+        Label(self.root,text="使用红包倍数:",bd=5).grid(row=6,column=1)
+        Label(self.root,text="当前动作:",bd=5).grid(row=9,column=1)
+        Label(self.root,text="使用红包面值:",bd=5).grid(row=8,column=1)
+        
+        hb_var=StringVar()
+        Entry(self.root,textvariable=hb_var,bd=5).grid(row=8,column=2)
+        hb_var.set(col_list[4])
+        
+        
+        pack_var=StringVar()
+        Label(self.root,bd=5,textvariable=pack_var).grid(row=9,column=2,columnspan=3)
+        pack_var.set('设置投资信息...')
+        
+        username_var=StringVar()
+        Entry(self.root,textvariable=username_var,bd=5).grid(row=0,column=2,columnspan=2)
+        username_var.set(col_list[0])
+        
+        pwd_var=StringVar()
+        Entry(self.root,textvariable=pwd_var,show='*',bd=5).grid(row=2,column=2,columnspan=2)
+        pwd_var.set(col_list[1])
+        
+        paypwd_var=StringVar()
+        Entry(self.root,textvariable=paypwd_var,bd=5).grid(row=4,column=2,columnspan=2)
+        paypwd_var.set(col_list[2])
+    
+        pranum_var=StringVar()
+        Entry(self.root,textvariable=pranum_var,bd=5).grid(row=6,column=2,columnspan=2)
+        pranum_var.set(col_list[3])    
+        
+        
+        commit_bt=Button(self.root,text="开始抢标",command=click_on,bg="green",width=15,fg="blue",bd=5)
+        commit_bt.grid(row=10,column=2,columnspan=2)
+        stop_bt=Button(self.root,text="停止抢标",command=stop_tb,bg="red",width=15,fg="blue",bd=5)
+        stop_bt.grid(row=10,column=1)            
+        self.root.mainloop()
 if __name__=='__main__':
-    qiang=q_mon('月光宝盒','ri123654','aaa111','8000','2')
-    qiang.q_mont()
+    yue=yuebiao_gui()
+    yue.main_go()
+
     
 
 

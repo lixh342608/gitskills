@@ -4,56 +4,61 @@ Created on 2017年6月18日
 
 @author: Administrator
 '''
-from tkinter import *
+from email import encoders
+from email.header import Header
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart  
+from email.utils import parseaddr, formataddr
+from email.mime.base import MIMEBase
 
+import smtplib,os
 
-import tkinter.messagebox
-
-root=Tk()
-width_n=root.winfo_screenwidth()/2-200
-height_n=root.winfo_screenheight()/2-150
-root.geometry('350x300+%d+%d' % (int(width_n),int(height_n)))
-
-lab1=Label(root,text="请输入雅堂帐户用户名:").pack()
-username_var=StringVar()
-Entry(root,textvariable=username_var).pack()
-username_var.set("")
-
-lab2=Label(root,text="请输入雅堂帐户密码:").pack()
-pwd_var=StringVar()
-Entry(root,textvariable=pwd_var,show='*').pack()
-pwd_var.set("")
-lab3=Label(root,text="请输入雅堂帐户交易密码:").pack()
-paypwd_var=StringVar()
-Entry(root,textvariable=paypwd_var).pack()
-paypwd_var.set("")
-
-lab4=Label(root,text="请输入投资金额（置 空将默认为最大金额）:").pack()
-pranum_var=StringVar()
-Entry(root,textvariable=pranum_var).pack()
-pranum_var.set("")
-def click_on():
-    username=username_var.get()
-    pwd=pwd_var.get()
-    paypwd=paypwd_var.get()
-    pranum=pranum_var.get()
-    if username and pwd and paypwd:
+def _format_addr(s):
+    name, addr = parseaddr(s)
+    return formataddr((Header(name, 'utf-8').encode(), addr))
+class sendmeil:
+    def __init__(self,_file):
+        self._file=_file
+        self.filename=os.path.split(self._file)[1]
+        self.ext=os.path.splitext(self._file)[1].replace('.','')
+        self.from_addr = "li_xianghuay@163.com"
+        self.password = "ri123654"#"mxzgoepapvimcahj"
+        self.to_addr = "zijinshanmao@163.com"
+        self.smtp_server = "smtp.163.com"
+    def msg_set(self):
+        msg = MIMEMultipart()  
+        msg['From'] = _format_addr('Python爱好者 <%s>' % self.from_addr)
+        msg['To'] = _format_addr('管理员 <%s>' % self.to_addr)
+        msg['Subject'] = Header('来自SMTP的问候……', 'utf-8').encode()
+        msg.attach(MIMEText('send with file...', 'plain', 'utf-8'))    
         
-        lishi=lishitest()
-        lishi.timeset(username,pwd)
-        if pranum:
-            lishi.giter(paypwd,pranum)
-        else:
-            lishi.giter(paypwd)
-        
-    else:
-        tkinter.messagebox.askokcancel("提示","除投资金额外所有项不可为空，如果有误将导致无法登录或抢秒时交易密码错误。")
-        
-    
-b1=Button(root,text="开始抢秒",command=click_on,bg="red",width=15,fg="blue").pack()
-root.mainloop()
+        with open(self._file, 'rb') as f:
+            # 设置附件的MIME和文件名，这里是png类型:
+            mime = MIMEBase('image', self.ext, filename=self.filename)
+            # 加上必要的头信息:
+            mime.add_header('Content-Disposition', 'attachment', filename=self.filename)
+            
+            mime.add_header('Content-ID', '<0>')
+            mime.add_header('X-Attachment-Id', '0')
+            # 把附件的内容读进来:
+            mime.set_payload(f.read())
+            # 用Base64编码:
+            encoders.encode_base64(mime)
+            # 添加到MIMEMultipart:
+            msg.attach(mime)
+        return msg
+    def sendmile(self):
+        msg=self.msg_set()
+        server = smtplib.SMTP(self.smtp_server, 25)
+        server.set_debuglevel(1)
+        server.login(self.from_addr, self.password)
+        server.sendmail(self.from_addr, [self.to_addr],msg.as_string())
+        server.quit()
 
 
+if __name__=='__main__':
+    mm=sendmeil('C:/Users\Administrator.Z6NRQGUFOYCRJGF/Desktop/tu.jpg')
+    mm.sendmile()
 
    
     

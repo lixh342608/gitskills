@@ -7,7 +7,7 @@ Created on 2017年6月16日
 from selenium import webdriver
 from time import sleep
 from selenium.common.exceptions import NoSuchElementException
-import pickle,threading,queue
+import pickle,threading
 from time_out import waittime
 from tkinter import *
 import tkinter.messagebox
@@ -81,14 +81,15 @@ class q_mon(threading.Thread):
         self.msg_var=msg_var
         self.hb_var=hb_var
         self.commit_bt=commit_bt
+        self.nopar=[]
         self.yuecol=loadcol()
         self.username=self.yuecol[0]#用户名
         self.pwd=self.yuecol[1]#用户密码
         self.paypwd=self.yuecol[2]#支付密码
         self.par_num=int(self.yuecol[3])#红包倍数
         self.par_sex=int(self.yuecol[4])#红包面值'''
-        self.driver=webdriver.PhantomJS()
-        #self.driver=webdriver.Chrome('C:/chromedriver')
+        #self.driver=webdriver.PhantomJS()
+        self.driver=webdriver.Chrome('C:/chromedriver')
         self.driver.get('https://jr.yatang.cn/Financial/asset')
         
         self.driver.maximize_window()
@@ -126,34 +127,52 @@ class q_mon(threading.Thread):
             self.login()
         else:
             self.msg_var.set('登陆成功')
+    def get_parnum(self,parsex):
+        if parsex not in self.nopar:
+            apr_num=reque_num(main_num)
+        return apr_num
             
     def q_mont(self):
         if not self.eve.is_set():
+            self.msg_var.set("抢标已暂停")
+            self.chnge_bt()
             self.driver.quit()
             self.eve.wait()
         #检测登录
         self.msg_var.set("检测登录状态...")
         login_ele=self.wait.get_ele('xpath','//*[@id="top"]/div[1]/div/div[2]/a[2]')
         if login_ele.text=='免费注册':
-            self.msg_var.set("检测到未登录状态，正在准备登录")
+            self.msg_var.set("正在准备登录...")
             self.login()
-        self.msg_var.set("正在寻找可投资的月标...")
-        #找符合要求的月标ID
-        #apr_num=reque_num(self.par_num*parsex)
+        self.msg_var.set("正在寻找月标...")
         #循环直到找到为止
         apr_num=0
         while int(apr_num)==0:
             if not self.eve.is_set():
+                self.msg_var.set("抢标已暂停")
+                self.chnge_bt()
                 self.driver.quit()
                 self.eve.wait()
-            self.msg_var.set("小主莫慌，宝宝努力抢标中...")
+            self.msg_var.set("宝宝努力抢标中...")
             parsex=self.par_sex
-            main_num=self.par_num*parsex
-            apr_num=reque_num(main_num)
-            if int(apr_num)==0 and self.par_sex>100:
-                parsex=100
+            for anum in range(3):
                 main_num=self.par_num*parsex
-                apr_num=reque_num(main_num)
+                if parsex in self.nopar:
+                    apr_num=reque_num(main_num)
+                elif parsex>100:
+                    parsex-=100
+                    continue
+                else:
+                    break
+                if apr_num==0 and parsex>100:
+                    parsex-=100
+                    
+                    
+                else:
+                    break
+                    
+                    
+
 
         self.msg_var.set("抢标成功，准备投标中...")
         url='https://jr.yatang.cn/Invest/ViewBorrow/ibid/%s' % apr_num
@@ -186,16 +205,17 @@ class q_mon(threading.Thread):
                           
                                     
                 else:
-                    if self.par_sex>100 and tkinter.messagebox.askyesno('报告','没有找到%d元面值红包，改用面值%d元红包投资？' % (self.par_sex,self.par_sex-100)):
-                    #if 
+                    tkinter.messagebox.showinfo('报告', '没有找到%d元面值红包，怪不得宝宝了' % parsex)
                     
-                        self.par_sex-=100
-                        self.hb_var.set(self.par_sex)
-                    else:
-                        tkinter.messagebox.showinfo("通知：","当前没有符合您需要的红包，请重新设置投资信息！")
-                        self.eve.wait()
+                    self.nopar.append(parsex)
+                    if len(self.nopar)>=int(self.par_sex//100):
+                        tkinter.messagebox.showinfo('报告', '主人应该没有%d倍红包了' % self.par_num)
+                        self.msg_var.set("抢标已暂停")
+                        self.chnge_bt()
                         self.driver.quit()
-                        return
+                        self.eve.wait()
+                        
+                    
                 self.q_mont()
                 
                 
@@ -221,6 +241,7 @@ class q_mon(threading.Thread):
 class yuebiao_gui:
     def __init__(self):
         self.root=Tk()
+        self.root.title('你值得拥有')
         width_n=self.root.winfo_screenwidth()/2-200
         height_n=self.root.winfo_screenheight()/2-200
         self.root.geometry('400x400+%d+%d' % (int(width_n),int(height_n)))
@@ -235,6 +256,7 @@ class yuebiao_gui:
             col_list=["","","","",""]
 
         def click_on():
+            stop_bt['state']=NORMAL
             commit_bt['state']=DISABLED
             username=username_var.get()
             pwd=pwd_var.get()
@@ -265,12 +287,12 @@ class yuebiao_gui:
         Label(self.root).grid(row=5,column=0)
         Label(self.root).grid(row=7,column=0)
         Label(self.root).grid(row=9,column=0)
-        
+        Label(self.root).grid(row=11,column=0)
         Label(self.root,text="雅堂帐户:",bd=5).grid(row=0,column=1)
         Label(self.root,text="帐户密码:",bd=5).grid(row=2,column=1)
         Label(self.root,text="交易密码:",bd=5).grid(row=4,column=1)
         Label(self.root,text="使用红包倍数:",bd=5).grid(row=6,column=1)
-        Label(self.root,text="当前动作:",bd=5).grid(row=9,column=1)
+        Label(self.root,text="当前动作:",bd=5,font="华康少女字体,16").grid(row=12,column=1,rowspan=2)
         Label(self.root,text="使用红包面值:",bd=5).grid(row=8,column=1)
         
         hb_var=StringVar()
@@ -279,7 +301,7 @@ class yuebiao_gui:
         
         
         pack_var=StringVar()
-        Label(self.root,bd=5,textvariable=pack_var).grid(row=9,column=2,columnspan=3)
+        Label(self.root,bd=5,textvariable=pack_var,font=16,fg='green').grid(row=12,column=2,rowspan=2,columnspan=2)
         pack_var.set('设置投资信息...')
         
         username_var=StringVar()
@@ -301,7 +323,7 @@ class yuebiao_gui:
         
         commit_bt=Button(self.root,text="开始抢标",command=click_on,bg="green",width=15,fg="blue",bd=5)
         commit_bt.grid(row=10,column=2,columnspan=2)
-        stop_bt=Button(self.root,text="停止抢标",command=stop_tb,bg="red",width=15,fg="blue",bd=5)
+        stop_bt=Button(self.root,text="停止抢标",command=stop_tb,bg="red",width=15,fg="blue",bd=5,state=DISABLED)
         stop_bt.grid(row=10,column=1)            
         self.root.mainloop()
 if __name__=='__main__':

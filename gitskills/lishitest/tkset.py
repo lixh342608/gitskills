@@ -37,9 +37,10 @@ def reque_num(main_num):
     data['page_href']='/Financial/getAssetList?&p=1'
     resq=requests.post(url,data,headers)
     t_text=json.loads(resq.text)['list']
-    
+    '''for i in t_text:
+        print(i)'''
     t_text=[i for i in t_text if i['showday']=='1个月' and i['remain'] > main_num]
-    
+    #print(t_text)
     apr=0
     apr_num=0
     for j in t_text:
@@ -102,6 +103,7 @@ class q_mon(threading.Thread):
         while y_col<=col:
             ele=self.wait.get_ele(byse,by_vale)
             if ele==0:
+                y_col+=1
                 continue
             else:
                 if ele.is_displayed():
@@ -109,8 +111,9 @@ class q_mon(threading.Thread):
                 else:
                     print("控件[%s]不可见！" % by_vale)
                     y_col+=1
-                    if y_col==col:
-                        return None
+                    continue
+        else:
+            return None
          
     def login(self):
         self.driver.get('https://jr.yatang.cn/NewLogin/index/referer/')
@@ -127,10 +130,7 @@ class q_mon(threading.Thread):
             self.login()
         else:
             self.msg_var.set('登陆成功')
-    def get_parnum(self,parsex):
-        if parsex not in self.nopar:
-            apr_num=reque_num(main_num)
-        return apr_num
+
             
     def q_mont(self):
         if not self.eve.is_set():
@@ -148,6 +148,7 @@ class q_mon(threading.Thread):
         #循环直到找到为止
         apr_num=0
         while int(apr_num)==0:
+            
             if not self.eve.is_set():
                 self.msg_var.set("抢标已暂停")
                 self.chnge_bt()
@@ -157,16 +158,24 @@ class q_mon(threading.Thread):
             parsex=self.par_sex
             for anum in range(3):
                 main_num=self.par_num*parsex
-                if parsex in self.nopar:
+                if parsex not in self.nopar:
                     apr_num=reque_num(main_num)
                 elif parsex>100:
                     parsex-=100
                     continue
                 else:
+                    tkinter.messagebox.showinfo('报告：','宝宝对面值100以下红包不感冒！告退了。')
+                    self.msg_var.set("抢标已暂停")
+                    self.chnge_bt()
+                    self.driver.quit()
+                    self.eve.wait()
                     break
-                if apr_num==0 and parsex>100:
-                    parsex-=100
-                    
+                if apr_num==0:
+                    if parsex>100:
+                        parsex-=100
+                    else:
+                        
+                        continue
                     
                 else:
                     break
@@ -180,7 +189,7 @@ class q_mon(threading.Thread):
         self.persi_ele('//*[@id="amountt"]').send_keys(main_num)
         self.msg_var.set("选择红包中...")
         #查找红包选框
-        hbxs_ele=self.persi_ele('hbje_xs','class',11)
+        hbxs_ele=self.persi_ele('hbje_xs','class',3)
         if hbxs_ele:
             hbxs_ele.click()
             #找到红包盒子
@@ -198,8 +207,7 @@ class q_mon(threading.Thread):
                         continue
                     if hbxs_ele.text=='%d元' % parsex:
                         self.msg_var.set("红包已准备完毕")
-                        #if tkinter.messagebox.askyesno('报告','请小主定夺！'):
-                        #print("投资测试")
+                       
                         self.biaochu()
                         break
                           
@@ -327,6 +335,8 @@ class yuebiao_gui:
         stop_bt.grid(row=10,column=1)            
         self.root.mainloop()
 if __name__=='__main__':
+    #apr=reque_num(4000)
+    #print(apr)
     yue=yuebiao_gui()
     yue.main_go()
 

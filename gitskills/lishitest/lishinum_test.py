@@ -44,26 +44,13 @@ class sendmeil:
         self.add_att.append(att)  
     def msg_set(self):
         msg = MIMEMultipart('alternative')  
-        msg['From'] = _format_addr('Python爱好者 <%s>' % self.from_addr)
+        msg['From'] = _format_addr('月半弯 <%s>' % self.from_addr)
         msg['To'] = _format_addr('管理员 <%s>' % self.to_addr)
-        msg['Subject'] = Header('来自SMTP的问候……', 'utf-8').encode()
+        msg['Subject'] = Header('来自花儿的问候……', 'utf-8').encode()
         msg.attach(MIMEText('send with file...', 'plain', 'utf-8'))    
         for att in self.add_att:
             msg.attach(att)
-        '''with open(self._file, 'rb') as f:
-            # 设置附件的MIME和文件名，这里是png类型:
-            mime = MIMEBase('image', self.ext, filename=self.filename)
-            # 加上必要的头信息:
-            mime.add_header('Content-Disposition', 'attachment', filename=self.filename)
-            
-            mime.add_header('Content-ID', '<0>')
-            mime.add_header('X-Attachment-Id', '0')
-            # 把附件的内容读进来:
-            mime.set_payload(f.read())
-            # 用Base64编码:
-            encoders.encode_base64(mime)
-            # 添加到MIMEMultipart:
-            msg.attach(mime)'''
+        
         return msg
     def sendmile(self):
         msg=self.msg_set()
@@ -97,6 +84,8 @@ class xupi:
                 if fc:
                     lab1_var.set('乖哦，发送成功了！')
                     b_var.set('我要抢标')
+                else:
+                    lab1_var.set('照骗？你在骗我么，检查下网络吧。')
             else:
                 self.root.destroy()
                 self.pack=1

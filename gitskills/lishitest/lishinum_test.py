@@ -111,11 +111,6 @@ class xupi:
         self.root.mainloop()
         return self.pack
 if __name__=='__main__':
-    '''mm=sendmeil()
-    mm.add_from('C:/Users\Administrator.Z6NRQGUFOYCRJGF/Desktop/tu.jpg')
-
-    fc=mm.sendmile()
-    print(fc)'''
     xp=xupi()
     pack=xp.send_pi()
     if pack:

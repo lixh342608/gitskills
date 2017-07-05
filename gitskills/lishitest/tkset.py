@@ -183,11 +183,16 @@ class q_mon(threading.Thread):
                     
 
 
-        self.msg_var.set("抢标成功，准备投标中...")
+        self.msg_var.set("抢标成功，\n准备投标中...")
         url='https://jr.yatang.cn/Invest/ViewBorrow/ibid/%s' % apr_num
         self.driver.get(url)
-        self.persi_ele('//*[@id="amountt"]').send_keys(main_num)
-        self.msg_var.set("选择红包中...")
+        mynum=self.persi_ele('//*[@id="amountt"]',col=0)
+        if mynum:
+            mynum.send_keys(main_num) 
+            self.msg_var.set("选择红包中...")
+        else:
+            self.msg_var.set("标被人抢先一步！")
+            self.q_mont()
         #查找红包选框
         hbxs_ele=self.persi_ele('hbje_xs','class',3)
         if hbxs_ele:

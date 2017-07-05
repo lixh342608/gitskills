@@ -38,17 +38,17 @@ class waittime:
         try:
             element=self.wait.until(funtion)
             return element
-        except TimeoutException as e:
-            print("定位元素超时!")
+        except TimeoutException:
+            print("定位元素超时!信息：%s" % value)
             return 0
-        except NoSuchElementException as e:
-            print("没有找到元素!")
+        except NoSuchElementException:
+            print("没有找到元素!信息：%s" % value)
             return 0
-        except ElementNotVisibleException as e:
-            print("元素不可见！")
+        except ElementNotVisibleException:
+            print("元素不可见！信息：%s" % value)
             return 0
-        except Exception as e:
-            print("程序出现错误!")
+        except Exception:
+            print("程序出现错误!信息：%s" % value)
             return 0
         
         

@@ -10,7 +10,7 @@ from selenium.common.exceptions import NoSuchElementException
 import pickle,threading,queue
 from time_out import waittime
 from tkinter import *
-import tkinter.messagebox
+import tkinter.messagebox,os,sys,time
 
 
 #que=queue.Queue()
@@ -27,30 +27,23 @@ def loadcol():
         return 0
 
 class lishitest(threading.Thread):
-    def __init__(self,que,msg_var,tdriver,ele_path):
+    def __init__(self,eve,msg_var,tdriver,ele_path):
         super(lishitest,self).__init__()
-        self.que=que
+        self.eve=eve
         self.msg_var=msg_var
         self.tdriver=tdriver
         self.ele_path=ele_path
     def run(self):
-        while True:
-            task_msg=self.que.get()
-            if isinstance(task_msg, str) and task_msg=='start':
-                self.col=loadcol()
-                self.start_br()
+        self.eve.wait()
+        self.col=loadcol()
+        self.start_br()
                 
-                self.start_click()
-                
-            elif isinstance(task_msg, str) and task_msg=='quit':
-                pass
-            else:
-                pass
+        self.start_click()
             
     def start_br(self):
         self.msg_var.set('正在启动浏览器...')
         self.driver=webdriver.PhantomJS()
-        #self.driver=webdriver.Chrome('C:/chromedriver')
+        self.driver=webdriver.Chrome('C:/chromedriver')
         self.driver.get('https://jr.yatang.cn/Financial/welfare')
         self.driver.maximize_window()
         self.wait=waittime(self.driver,10)
@@ -61,6 +54,14 @@ class lishitest(threading.Thread):
         
     def timeset(self):   
         while True:
+            now=time.strftime('%Y-%m-%d',time.localtime(time.time()))
+            if now!="2017-07-10":
+                try:
+                    sys.exit(0)
+                except:
+                    tkinter.messagebox.showinfo('报告', '程序已失效！')
+                finally:
+                    return 1            
             self.tdriver.refresh()
             self.driver.refresh()
             login_ele=self.wait.get_ele('xpath','//*[@id="top"]/div[1]/div/div[2]/a[2]')
@@ -95,6 +96,7 @@ class lishitest(threading.Thread):
                 continue
             else:
                 break
+        return 0
     def tr_time(self):
         ti_text=self.driver.find_element_by_class_name(self.ele_path['time_class']).text
         return ti_text
@@ -115,18 +117,22 @@ class lishitest(threading.Thread):
         else:
             self.msg_var.set('登陆成功')
 
-    def persi_ele(self,by_vale,byse='xpath'):
-        while True:
+    def persi_ele(self,by_vale,byse='xpath',col=1000):
+        y_col=0
+        while y_col<=col:
             ele=self.wait.get_ele(byse,by_vale)
             if ele==0:
+                y_col+=1
                 continue
             else:
                 if ele.is_displayed():
-                    break
+                    return ele
                 else:
-                    print("控件不可见！")
+                    print("控件[%s]不可见！" % by_vale)
+                    y_col+=1
                     continue
-        return ele 
+        else:
+            return None  
     def wrrtenum(self,numer):
         if numer==None:
             dra_text=self.persi_ele(self.ele_path['withdra_class'], 'class').text
@@ -147,24 +153,22 @@ class lishitest(threading.Thread):
         commit_ele=self.persi_ele(self.ele_path['commit_xpath'])
         commit_ele.click()
         
-        sleep(10)
-        try:
-            check_ele=self.persi_ele('/html/body/div[5]/div/div/div/div[1]/div[1]/b')
-            if '恭喜' in check_ele.text:
-                self.msg_var.set('恭喜，已成功投资秒标！')
-            else:
-                self.msg_var.set('抱谦，可能是电脑或网络原因导致投秒未成功，下次再接再励！')
-        except:
-            self.msg_var.set('抱谦，可能是电脑或网络原因导致投秒未成功，下次再接再励！')
+        sleep(15)
+        self.msg_var.set('抢秒已结束，祝您好运！')
 
 
     def start_click(self):
         
-        self.timeset()
-        if self.col[3]:
-            self.giter(self.col[2],self.col[3])
+        pac=self.timeset()
+        if not pac:
+            if self.col[3]:
+                self.giter(self.col[2],self.col[3])
+            else:
+                self.giter(self.col[2])
         else:
-            self.giter(self.col[2])
+            self.driver.quit()
+            
+            self.eve.clear()
     def fomat_t(self,timer):
         t_list=[]
         fomat_list=[3600,60,1]
@@ -177,19 +181,24 @@ class lishitest(threading.Thread):
         return ":".join(t_list)
 class lishi_gui:
     def __init__(self):
-
-        self.driver=webdriver.PhantomJS()
+        self.driver=webdriver.Chrome('C:/chromedriver')
+        #self.driver=webdriver.PhantomJS()
         self.driver.get('https://jr.yatang.cn/Financial/welfare')
+        self.lishinumer=self.lishinum()
         self.set_xpath()
         self.root=Tk()
         width_n=self.root.winfo_screenwidth()/2-200
         height_n=self.root.winfo_screenheight()/2-150
         self.root.geometry('350x300+%d+%d' % (int(width_n),int(height_n)))
     def lishinum(self):
-        pr_ele=self.driver.find_element_by_class_name('wf_move_box')
+        lishinumer=0
+        try:
+            pr_ele=self.driver.find_element_by_class_name('wf_move_box')
+        except NoSuchElementException:
+            return lishinumer
         ele_list=pr_ele.find_elements_by_class_name('wf_list_box')
         ele_list=filter(lambda x:x.get_attribute('iborrowid')!='0',ele_list)
-        lishinumer=0
+        
         ele_praser=0
         for i in ele_list:
             ele=i.find_element_by_class_name('wf_xq_lv')
@@ -199,14 +208,14 @@ class lishi_gui:
                 lishinumer=i.get_attribute('iborrowid')
         return lishinumer
     def set_xpath(self):
-        lishinumer=self.lishinum()
+        
         self.ele_path={}
-        self.ele_path['numer_xpath']='//*[@id="amountt_%s"]' % lishinumer
-        self.ele_path['check_xpath']='//*[@id="incheck_%s"]' % lishinumer
-        self.ele_path['ppay_xpath']='//*[@id="ppay_%s"]' % lishinumer
-        self.ele_path['commit_xpath']='//*[@id="button_%s"]' % lishinumer
-        self.ele_path['withdra_class']='aj_withdrawalCash_%s' % lishinumer
-        self.ele_path['time_class']='lefttime_%s' % lishinumer
+        self.ele_path['numer_xpath']='//*[@id="amountt_%s"]' % self.lishinumer
+        self.ele_path['check_xpath']='//*[@id="incheck_%s"]' % self.lishinumer
+        self.ele_path['ppay_xpath']='//*[@id="ppay_%s"]' % self.lishinumer
+        self.ele_path['commit_xpath']='//*[@id="button_%s"]' % self.lishinumer
+        self.ele_path['withdra_class']='aj_withdrawalCash_%s' % self.lishinumer
+        self.ele_path['time_class']='lefttime_%s' % self.lishinumer
     def tr_time(self):
         ti_text=self.driver.find_element_by_class_name(self.ele_path['time_class']).text
         return ti_text
@@ -216,7 +225,7 @@ class lishi_gui:
         try:
             tr_time=self.tr_time()
         except:
-            sleep(3)
+            sleep(5)
             tr_time=self.tr_time()
         self.time_lab.config(text=tr_time)
         self.root.update()
@@ -237,10 +246,12 @@ class lishi_gui:
                 col=[username,pwd,paypwd,pranum]
                 writcol(col)
                 self.pack_var.set('正在初始化...')
-                self.que=queue.Queue()
-                self.tasker=lishitest(self.que,self.pack_var,self.driver,self.ele_path)
+                self.eve=threading.Event()
+                self.tasker=lishitest(self.eve,self.pack_var,self.driver,self.ele_path)
+                self.tasker.setDaemon(True)
                 self.tasker.start()
-                self.que.put('start')
+                sleep(2)
+                self.eve.set()                
             else:
                 tkinter.messagebox.askokcancel("提示","除投资金额外所有项不可为空，如果有误将导致无法登录或抢秒时交易密码错误。")
      
@@ -262,8 +273,19 @@ class lishi_gui:
         self.time_lab=Label(self.root,text="准备中",bd=5)
 
         self.time_lab.grid(row=10,column=2)
-        self.time_lab.after(1000,self.trickit)
-        
+        if self.lishinumer:
+            
+            self.time_lab.after(1000,self.trickit)
+        else:
+            tkinter.messagebox.showinfo('报告：', '当前似乎没有秒标！')
+            try:
+                sys.exit(0)
+            except:
+                tkinter.messagebox.showinfo('报告：', '程序即将退出！')
+            finally:
+                self.driver.quit()
+                self.root.destroy()
+                os._exit(0)
         self.pack_var=StringVar()
         Label(self.root,bd=5,textvariable=self.pack_var).grid(row=9,column=2,columnspan=3)
         self.pack_var.set('设置投资信息...')

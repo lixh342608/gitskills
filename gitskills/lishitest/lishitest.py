@@ -7,7 +7,7 @@ Created on 2017年6月12日
 from selenium import webdriver
 from time import sleep
 from selenium.common.exceptions import NoSuchElementException
-import re,pickle,os
+import re,pickle,time,sys,platform
 from time_out import waittime
 from tkinter import *
 import tkinter.messagebox
@@ -26,29 +26,35 @@ def loadcol():
 
 class lishitest:
     def __init__(self):
+        
         self.driver=webdriver.Chrome('C:/chromedriver')
         self.driver.get('https://jr.yatang.cn/Financial/welfare')
         
         self.driver.maximize_window()
         self.wait=waittime(self.driver,10)
         
-        
-        
-        
-    def persi_ele(self,by_vale,byse='xpath'):
-        while True:
+    def persi_ele(self,by_vale,byse='xpath',col=1000):
+        y_col=0
+        while y_col<=col:
             ele=self.wait.get_ele(byse,by_vale)
             if ele==0:
+                y_col+=1
                 continue
             else:
                 if ele.is_displayed():
-                    break
+                    return ele
                 else:
-                    print("控件不可见！")
+                    print("控件[%s]不可见！" % by_vale)
+                    y_col+=1
                     continue
-        return ele 
+        else:
+            return None        
+        
+        
     def lishinum(self):
-        pr_ele=self.persi_ele('wf_move_box','class')
+        pr_ele=self.persi_ele('wf_move_box','class',0)
+        if not pr_ele:
+            return '0'
         ele_list=pr_ele.find_elements_by_class_name('wf_list_box')
         ele_list=filter(lambda x:x.get_attribute('iborrowid')!='0',ele_list)
         lishinumer=0
@@ -60,8 +66,7 @@ class lishitest:
                 ele_praser=ele_pra
                 lishinumer=i.get_attribute('iborrowid')
         return lishinumer
-    def set_xpath(self):
-        lishinumer=self.lishinum()
+    def set_xpath(self,lishinumer):        
         self.numer_xpath='//*[@id="amountt_%s"]' % lishinumer
         self.check_xpath='//*[@id="incheck_%s"]' % lishinumer
         self.ppay_xpath='//*[@id="ppay_%s"]' % lishinumer
@@ -110,14 +115,30 @@ class lishitest:
         commit_ele=self.persi_ele(self.commit_xpath)
         commit_ele.click()
         
-        sleep(10)
         check_ele=self.persi_ele('/html/body/div[5]/div/div/div/div[1]/div[1]/b')
         print(check_ele.text)
 
     def timeset(self,username,pwd):
-        self.set_xpath()
+        lishinumer=self.lishinum()
+        if lishinumer=='0':
+            tkinter.messagebox.showinfo('报告', '没有可投秒标！')
+            try:
+                sys.exit(0)
+            except:
+                tkinter.messagebox.showinfo('报告', '程序准备退出！')
+            finally:
+                return 2
+        self.set_xpath(lishinumer)
         
         while True:
+            now=time.strftime('%Y-%m-%d',time.localtime(time.time()))
+            if now!="2017-07-10":
+                try:
+                    sys.exit(0)
+                except:
+                    tkinter.messagebox.showinfo('报告', '程序已失效！')
+                finally:
+                    return 1
             self.driver.refresh()
             login_ele=self.wait.get_ele('xpath','//*[@id="top"]/div[1]/div/div[2]/a[2]')
             
@@ -149,8 +170,9 @@ class lishitest:
                 continue
             else:
                 break
+        return 0
 def main_go():
-    
+    plat='Z6NRQGUFOYCRJGFWindows-7-6.1.7601-SP1'
     col_list=loadcol()
     if col_list==0:
         col_list=["","",""]
@@ -179,6 +201,7 @@ def main_go():
     Entry(root,textvariable=pranum_var).pack()
     pranum_var.set("")
     def click_on():
+        if platform.node()+platform.platform()!=plat:root.destroy()
         username=username_var.get()
         pwd=pwd_var.get()
         paypwd=paypwd_var.get()
@@ -188,11 +211,15 @@ def main_go():
             writcol(col)
         
             lishi=lishitest()
-            lishi.timeset(username,pwd)
-            if pranum:
-                lishi.giter(paypwd,pranum)
+            pac=lishi.timeset(username,pwd)
+            if pac==0:
+                if pranum:
+                    lishi.giter(paypwd,pranum)
+                else:
+                    lishi.giter(paypwd)
             else:
-                lishi.giter(paypwd)
+                lishi.driver.quit()
+                
         
         else:
             tkinter.messagebox.askokcancel("提示","除投资金额外所有项不可为空，如果有误将导致无法登录或抢秒时交易密码错误。")

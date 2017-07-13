@@ -11,7 +11,7 @@ import pickle,threading
 from time_out import waittime
 from tkinter import *
 import tkinter.messagebox
-import json,requests
+import json,requests,platform,time,sys
 
 def writcol(col):
     with open("yuelocation.pic","wb") as f:
@@ -37,10 +37,10 @@ def reque_num(main_num):
     data['page_href']='/Financial/getAssetList?&p=1'
     resq=requests.post(url,data,headers)
     t_text=json.loads(resq.text)['list']
-    '''for i in t_text:
-        print(i)'''
-    t_text=[i for i in t_text if i['showday']=='1个月' and i['remain'] > main_num]
-    #print(t_text)
+    
+    t_text=[i for i in t_text if i['showday']=='1个月' and i['remain'] > main_num]# and i['borrow_type'] != '10']
+    #for i in t_text:
+        #print(i)
     apr=0
     apr_num=0
     for j in t_text:
@@ -48,39 +48,13 @@ def reque_num(main_num):
             apr=float(j['apr'])
             apr_num=j['id']
     
-    return apr_num
-#使用urllib实现查询第一页期限一个月，待投金额大于X，利率最高的标   
-'''def select_num(main_num):
-    url='https://jr.yatang.cn/Financial/getAssetList'
-    
-    data={}
-    data['aprrange']='0'
-    data['selectdate']='2'
-    data['repaystyle']='0'
-    data['goto_page']=''
-    data['page_href']='/Financial/getAssetList?&p=1'
-    
-    data=urllib.parse.urlencode(data).encode('utf-8')
-    req=urllib.request.Request(url,data)
-    req.add_header('User-Agent','Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.86 Safari/537.36')
-    resp=urllib.request.urlopen(req)
-    t_text=json.loads(resp.read().decode('utf-8'))['list']
+    return apr_num   
 
-
-    t_text=[i for i in t_text if i['showday']=='1个月' and i['remain'] > main_num]
-    apr=0
-    for j in t_text:
-        if float(j['apr'])>apr:
-            apr=float(j['apr'])
-            apr_num=j['id']
-    
-    return apr_num'''
 class q_mon(threading.Thread):
-    def __init__(self,eve,msg_var,hb_var,commit_bt):
+    def __init__(self,eve,msg_var,commit_bt):
         super(q_mon,self).__init__()
         self.eve=eve
         self.msg_var=msg_var
-        self.hb_var=hb_var
         self.commit_bt=commit_bt
         self.nopar=[]
         self.yuecol=loadcol()
@@ -88,7 +62,7 @@ class q_mon(threading.Thread):
         self.pwd=self.yuecol[1]#用户密码
         self.paypwd=self.yuecol[2]#支付密码
         self.par_num=int(self.yuecol[3])#红包倍数
-        self.par_sex=int(self.yuecol[4])#红包面值'''
+        self.parsex_list=self.yuecol[4].split(',')#红包面值'''
         #self.driver=webdriver.PhantomJS()
         self.driver=webdriver.Chrome('C:/chromedriver')
         self.driver.get('https://jr.yatang.cn/Financial/asset')
@@ -133,6 +107,7 @@ class q_mon(threading.Thread):
 
             
     def q_mont(self):
+
         if not self.eve.is_set():
             self.msg_var.set("抢标已暂停")
             self.chnge_bt()
@@ -148,37 +123,33 @@ class q_mon(threading.Thread):
         #循环直到找到为止
         apr_num=0
         while int(apr_num)==0:
-            
+            now=time.strftime('%Y-%m-%d',time.localtime(time.time()))
+            if now!="2017-07-12":
+                try:
+                    sys.exit(0)
+                except:
+                    tkinter.messagebox.showinfo('报告', '程序已失效！')
+                finally:
+                    self.eve.clear()
+                
             if not self.eve.is_set():
                 self.msg_var.set("抢标已暂停")
                 self.chnge_bt()
                 self.driver.quit()
                 self.eve.wait()
             self.msg_var.set("宝宝努力抢标中...")
-            parsex=self.par_sex
-            for anum in range(3):
-                main_num=self.par_num*parsex
-                if parsex not in self.nopar:
+            for pars in self.parsex_list:
+                parsex=int(pars)
+                if pars not in self.nopar:
+                    main_num=self.par_num*parsex
                     apr_num=reque_num(main_num)
-                elif parsex>100:
-                    parsex-=100
+                else:
                     continue
-                else:
-                    tkinter.messagebox.showinfo('报告：','宝宝对面值100以下红包不感冒！告退了。')
-                    self.msg_var.set("抢标已暂停")
-                    self.chnge_bt()
-                    self.driver.quit()
-                    self.eve.wait()
+                if apr_num!=0:
                     break
-                if apr_num==0:
-                    if parsex>100:
-                        parsex-=100
-                    else:
-                        
-                        continue
-                    
-                else:
-                    break
+            else:
+                continue        
+            break
                     
                     
 
@@ -201,8 +172,8 @@ class q_mon(threading.Thread):
             ele_box=self.persi_ele('hb_xl_box','class') 
             try:
                 #找到盒子中所有红包
-                hb_list=ele_box.find_elements_by_class_name('hb_check_list')
-                
+                hb_list=self.driver.find_elements_by_class_name('hb_check_list')
+            
                 for hb in hb_list:
                     hb_li=hb.text.replace('元','').split('\n')
                     #如果红包等于预期红包且投资金额等于预期投资金额则选中该红包
@@ -221,7 +192,7 @@ class q_mon(threading.Thread):
                     tkinter.messagebox.showinfo('报告', '没有找到%d元面值红包，怪不得宝宝了' % parsex)
                     
                     self.nopar.append(parsex)
-                    if len(self.nopar)>=int(self.par_sex//100):
+                    if len(self.nopar)>=len(self.parsex_list):
                         tkinter.messagebox.showinfo('报告', '主人应该没有%d倍红包了' % self.par_num)
                         self.msg_var.set("抢标已暂停")
                         self.chnge_bt()
@@ -247,12 +218,20 @@ class q_mon(threading.Thread):
         
             pay_ele.send_keys(self.paypwd)
             self.persi_ele('//*[@id="button"]').click()
-            tkinter.messagebox.showinfo('报告','宝宝能做的只有这些了，祝你好远！')
+            ti_mm=15
+            while ti_mm>=0:
+                self.msg_var.set('投标已进入队列，\n等待15秒（%d）' % ti_mm)
+                sleep(1)
+                ti_mm-=1
+            
     def chnge_bt(self):
         self.commit_bt['state']=NORMAL
         self.commit_bt["text"]="继续投资"        
 class yuebiao_gui:
     def __init__(self):
+        self.plat='Z6NRQGUFOYCRJGFWindows-7-6.1.7601-SP1'
+
+            
         self.root=Tk()
         self.root.title('你值得拥有')
         width_n=self.root.winfo_screenwidth()/2-200
@@ -261,7 +240,7 @@ class yuebiao_gui:
 
 
     
-
+    
     def main_go(self):
         
         col_list=loadcol()
@@ -269,19 +248,22 @@ class yuebiao_gui:
             col_list=["","","","",""]
 
         def click_on():
-            stop_bt['state']=NORMAL
-            commit_bt['state']=DISABLED
+            if platform.node()+platform.platform()!=self.plat:self.root.destroy()
+            
+            
             username=username_var.get()
             pwd=pwd_var.get()
             paypwd=paypwd_var.get()
             pranum=pranum_var.get()
             hbset=hb_var.get()
             if username and pwd and paypwd and pranum and hbset:
+                stop_bt['state']=NORMAL
+                commit_bt['state']=DISABLED
                 yue_col=[username,pwd,paypwd,pranum,hbset]
                 writcol(yue_col)
                 pack_var.set('正在初始化...')
                 self.eve=threading.Event()
-                self.tasker=q_mon(self.eve,pack_var,hb_var,commit_bt)
+                self.tasker=q_mon(self.eve,pack_var,commit_bt)
                 self.tasker.setDaemon(True)
                 self.tasker.start()
                 sleep(2)
@@ -299,7 +281,7 @@ class yuebiao_gui:
         Label(self.root).grid(row=3,column=0)
         Label(self.root).grid(row=5,column=0)
         Label(self.root).grid(row=7,column=0)
-        Label(self.root).grid(row=9,column=0)
+        Label(self.root,text='红包面值可设置多个，使用英文逗号（,）隔开。',bd=5).grid(row=9,column=1,columnspan=3)
         Label(self.root).grid(row=11,column=0)
         Label(self.root,text="雅堂帐户:",bd=5).grid(row=0,column=1)
         Label(self.root,text="帐户密码:",bd=5).grid(row=2,column=1)

@@ -101,6 +101,9 @@ class waittime:
         except TimeoutException:
             print('定位元素超时',value)
             return None
+    def alert_present(self):
+        instance = self.wait.until(EC.alert_is_present()(self.driver))
+        return instance
 
 if __name__=="__main__":
 

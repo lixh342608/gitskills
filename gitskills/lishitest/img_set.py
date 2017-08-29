@@ -4,7 +4,7 @@ Created on 2017年6月15日
 
 @author: Administrator
 '''
-import platform
+'''import platform
 from email import encoders
 from email.header import Header
 from email.mime.text import MIMEText
@@ -65,45 +65,43 @@ class sendmeil:
 
 if __name__=='__main__':
     mm=sendmeil()
-    mm.sendmile()
+    mm.sendmile()'''
     
     
     
-"""
+
 from PIL import Image,ImageEnhance
 import pytesseract,re,requests,json
 from selenium import webdriver
 from time import sleep
-
-def img_set(driver):
+from time_out import waittime
+def img_set(driver,wait):
     driver.save_screenshot('f://aa.png')  #截取当前网页，该网页有我们需要的验证码
-    imgelement = driver.find_element_by_xpath('//*[@id="confirm-code"]/img')  #定位验证码
+    imgelement = wait.visibility('name','validate')  #定位验证码
     location = imgelement.location  #获取验证码x,y轴坐标
     size=imgelement.size  #获取验证码的长宽
     rangle=(int(location['x']),int(location['y']),int(location['x']+size['width']),int(location['y']+size['height'])) #写成我们需要截取的位置坐标
     i=Image.open("f://aa.png") #打开截图
     frame4=i.crop(rangle)  #使用Image的crop函数，从截图中再次截取我们需要的区域
-    
-    #frame4.save("f:/image_code.jpg")
     imgry = frame4.convert('L')#图像加强，二值化
     sharpness =ImageEnhance.Contrast(imgry)
     sharp_img = sharpness.enhance(2.0)
     sharp_img.save("f:/image_code.jpg")
-    
     text=pytesseract.image_to_string(sharp_img) #使用image_to_string识别验证码
-    #text=re.sub("\W", "", text)
-    print(text)
+    text = re.sub("\W", "", text)
     return text
-def login(driver):
+def login(driver,username,pwd):
     driver.get('https://jr.yatang.cn/NewLogin/index/referer/')
-    driver.switch_to.frame(0)
-    driver.find_element_by_xpath('//*[@id="js-username"]').send_keys('月光宝盒')
-    
-    driver.find_element_by_xpath('//*[@id="js-password"]').send_keys('ri123654')
-    
-    
-    driver.find_element_by_xpath('//*[@id="js-login"]').click()
-    #sleep(5)
+    wait=waittime(driver,20)
+    wait.visibility('css', '#username').send_keys(username)
+
+    wait.visibility('css', '#password').send_keys(pwd)
+    yzm=img_set(driver,wait)
+    wait.visibility('name', 'sendnumber').send_keys(yzm)
+    wait.clickable('css', '#button').click()
+    sleep(1)
+    if '登录' in driver.title:
+        login(driver,username,pwd)
     return driver
     '''login_ele=driver.find_element_by_xpath('//*[@id="top"]/div[1]/div/div[2]/a[2]')
     if login_ele and login_ele.text=='免费注册':
@@ -138,9 +136,10 @@ def reque_num(main_num):
 if __name__=='__main__':
     driver=webdriver.Chrome('C:/chromedriver')
     driver.maximize_window()
-    driver=login(driver)
+    driver.get('https://jr.yatang.cn/NewLogin/index/referer/')
+    login(driver,'月光宝盒','ri123654')
     sleep(5)
-    apr_num=reque_num(50)
+    '''apr_num=reque_num(50)
     url='https://jr.yatang.cn/Invest/ViewBorrow/ibid/%s' % apr_num
     driver.get(url)
     driver.find_element_by_xpath('//*[@id="amountt"]').send_keys(50)
@@ -157,4 +156,4 @@ if __name__=='__main__':
     
     text=pytesseract.image_to_string(sharp_img) #使用image_to_string识别验证码
     #text=re.sub("\W", "", text)
-    print(text)""" 
+    print(text)'''

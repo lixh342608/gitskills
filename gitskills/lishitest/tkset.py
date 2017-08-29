@@ -5,7 +5,7 @@ Created on 2017年6月16日
 @author: Administrator
 '''
 from selenium import webdriver
-import pickle,threading
+import pickle,threading,img_set
 from time_out import waittime
 from tkinter import *
 import tkinter.messagebox
@@ -71,22 +71,6 @@ class q_mon(threading.Thread):
     def run(self):
         self.eve.wait()
         self.q_mont()
-         
-    def login(self):
-        self.driver.get('https://jr.yatang.cn/NewLogin/index/referer/')
-        self.driver.switch_to.frame(0)
-        self.wait.visibility('xpath','//*[@id="js-username"]').send_keys(self.username)
-        
-        self.wait.visibility('xpath','//*[@id="js-password"]').send_keys(self.pwd)
-        
-        
-        self.wait.clickable('xpath','//*[@id="js-login"]').click()
-        time.sleep(2)
-        login_ele=self.wait.get_ele('xpath','//*[@id="top"]/div[1]/div/div[2]/a[2]')
-        if login_ele and login_ele.text=='免费注册':
-            self.login()
-        else:
-            self.msg_var.set('登陆成功')
     def q_mont(self):
 
         if not self.eve.is_set():
@@ -99,7 +83,8 @@ class q_mon(threading.Thread):
         login_ele=self.wait.get_ele('xpath','//*[@id="top"]/div[1]/div/div[2]/a[2]')
         if login_ele.text=='免费注册':
             self.msg_var.set("正在准备登录...")
-            self.login()
+            img_set.login(self.driver,self.username,self.pwd)
+            self.msg_var.set("登录成功！")
         self.msg_var.set("正在寻找月标...")
         #循环直到找到为止
         apr_num=0

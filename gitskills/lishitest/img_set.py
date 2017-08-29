@@ -73,6 +73,7 @@ if __name__=='__main__':
 from PIL import Image,ImageEnhance
 import pytesseract,re,requests,json
 from selenium import webdriver
+from selenium.webdriver.support.select import Select
 from time import sleep
 from time_out import waittime
 def img_set(driver,wait):
@@ -98,6 +99,8 @@ def login(driver,username,pwd):
     wait.visibility('css', '#password').send_keys(pwd)
     yzm=img_set(driver,wait)
     wait.visibility('name', 'sendnumber').send_keys(yzm)
+    select = wait.visibility('id', 'cookietime')
+    Select(select).select_by_value('7200')
     wait.clickable('css', '#button').click()
     sleep(1)
     if '登录' in driver.title:

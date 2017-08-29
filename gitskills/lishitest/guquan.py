@@ -6,9 +6,9 @@ Created on 2017年6月12日
 '''
 from selenium import webdriver
 from time import sleep
+from time_out import waittime
 from selenium.webdriver.support.select import Select
 import re,pickle,time,sys,platform
-from time_out import waittime
 from tkinter import *
 import tkinter.messagebox
 
@@ -32,19 +32,19 @@ class lishitest:
         
         self.driver.maximize_window()
         self.wait=waittime(self.driver,30)
-            
+
     def login(self,username,pwd):
         self.driver.get('https://jr.yatang.cn/NewLogin/index/referer/')
         self.driver.switch_to.frame(0)
         self.wait.visibility('xpath','//*[@id="js-username"]').send_keys(username)
-        
+
         self.wait.visibility('xpath','//*[@id="js-password"]').send_keys(pwd)
         select=self.wait.visibility('id','_cache_time')
         Select(select).select_by_value('7200')
-        
-        
+
+
         self.wait.visibility('xpath','//*[@id="js-login"]').click()
-        
+
         sleep(2)
         login_ele=self.wait.get_ele('xpath','//*[@id="top"]/div[1]/div/div[2]/a[2]')
         #print(login_ele.text)
@@ -55,7 +55,7 @@ class lishitest:
 
     def wrrtenum(self,numer):
         if numer==None:
-            dra_text=self.wait.visibility('id','mostaccount2').click()
+            self.wait.visibility('id','mostaccount2').click()
             
             #numer=int(float(dra_text.strip('￥').replace(',','')))
         else:
@@ -69,12 +69,12 @@ class lishitest:
     def giter(self,pay_pwd,numer=None):
         gq_link=self.wait.visibility('css','body > div.zc_detail > div.zc_detail_box > a').get_attribute('href')
         self.driver.get(gq_link)
+        #self.wrrtenum(numer)
         ele = self.wait.presence('id','incheck')
         if ele:
             self.driver.refresh()
             self.wrrtenum(numer)
-        #ele=self.persi_ele('incheck','id')
-        #ele.click()
+            ele.click()
             self.miaochu(pay_pwd)
     def miaochu(self,pay_pwd):
         pay_ele=self.wait.visibility('id','ppay')
@@ -92,7 +92,7 @@ class lishitest:
         
         while True:
             now=time.strftime('%Y-%m-%d')
-            if now!="2017-08-26":
+            if now!="2017-08-29":
                 try:
                     sys.exit(0)
                 except:
@@ -108,8 +108,8 @@ class lishitest:
             sleep(1)
             ti_text=self.wait.visibility('class','zc_sysj').text
             ti_list=re.findall("\d{1,2}",ti_text)
-            #ti_sum=int(ti_list[0])*86400+int(ti_list[1])*3600+int(ti_list[2])*60+int(ti_list[3])
-            ti_sum=int(ti_list[3])
+            ti_sum=int(ti_list[0])*86400+int(ti_list[1])*3600+int(ti_list[2])*60+int(ti_list[3])
+            #ti_sum=int(ti_list[3])
             #ti_strip=time.mktime(time.strptime('2017-08-04 10:40:00', "%Y-%m-%d %H:%M:%S"))
             #ti_sum=int(ti_strip-time.time())-16
             print('距离投资股权时间还有%d秒' % ti_sum)

@@ -38,7 +38,7 @@ def reque_num(main_num):
     data['page_href']='/Financial/getAssetList?&p=1'
     resq=requests.post(url,data=data,headers=headers,cookies=cookie_dict)
     t_text=resq.json()['list']
-
+    print(t_text)
     #t_text=json.loads(resq.text)['list']
     t_text=[i for i in t_text if i['showday']=='1个月' and i['remain'] > main_num and float(i['apr']) >= 5.0]# and i['borrow_type'] != '10']
 

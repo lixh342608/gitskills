@@ -76,9 +76,10 @@ from selenium import webdriver
 from selenium.webdriver.support.select import Select
 from time import sleep
 from time_out import waittime
-def img_set(driver,wait):
+def img_set(driver):
+    wait=waittime(driver,5)
     driver.save_screenshot('f://aa.png')  #截取当前网页，该网页有我们需要的验证码
-    imgelement = wait.visibility('name','validate')  #定位验证码
+    imgelement = wait.visibility('css','body > div.container > div > div > img.verify-code-img')  #定位验证码
     location = imgelement.location  #获取验证码x,y轴坐标
     size=imgelement.size  #获取验证码的长宽
     rangle=(int(location['x']),int(location['y']),int(location['x']+size['width']),int(location['y']+size['height'])) #写成我们需要截取的位置坐标
@@ -87,9 +88,12 @@ def img_set(driver,wait):
     imgry = frame4.convert('L')#图像加强，二值化
     sharpness =ImageEnhance.Contrast(imgry)
     sharp_img = sharpness.enhance(2.0)
-    sharp_img.save("f:/image_code.jpg")
+    sharp_img.save("f:/image_code.png")
+    #sharp_img=Image.open("f:/image_code.png")
+
     text=pytesseract.image_to_string(sharp_img) #使用image_to_string识别验证码
     text = re.sub("\W", "", text)
+    print(text)
     return text
 def login(driver,username,pwd):
     driver.get('https://jr.yatang.cn/NewLogin/index/referer/')
@@ -137,11 +141,8 @@ def reque_num(main_num):
     return apr_num  
 
 if __name__=='__main__':
-    driver=webdriver.Chrome('C:/chromedriver')
-    driver.maximize_window()
-    driver.get('https://jr.yatang.cn/NewLogin/index/referer/')
-    login(driver,'月光宝盒','ri123654')
-    sleep(5)
+    test=img_set()
+    print(test)
     '''apr_num=reque_num(50)
     url='https://jr.yatang.cn/Invest/ViewBorrow/ibid/%s' % apr_num
     driver.get(url)

@@ -5,12 +5,13 @@ Created on 2017年6月12日
 @author: Administrator
 '''
 from selenium import webdriver
-import pickle,platform,re,time
+from selenium.webdriver.support.select import Select
+from time import sleep
 from time_out import waittime
 from tkinter import *
 import tkinter.messagebox
 
-def writcol(col):
+'''def writcol(col):
     with open("collocation.pic","wb") as f:
         pickle.dump(col, f)
 def loadcol():
@@ -19,71 +20,48 @@ def loadcol():
             col=pickle.load(f)   
             return col     
     except IOError:
-        return 0
+        return 0'''
 
 
 class lishitest:
-    def __init__(self):
+    def __init__(self,username,paypwd,passwd="ri123654"):
+        self.username=username
+        self.paypwd=paypwd
+        self.pwd=passwd
         
         self.driver=webdriver.Chrome('C:/chromedriver')
-        self.driver.get('https://jr.yatang.cn/Financial/welfare')
+
         
         self.driver.maximize_window()
         self.wait=waittime(self.driver,20)
-    def lishinum(self):
-        pr_ele=self.wait.presence('class','wf_move_box')
-        if not pr_ele:
-            return '0'
-        ele_list=pr_ele.find_elements_by_class_name('wf_list_box')
-        ele_list=filter(lambda x:x.get_attribute('iborrowid')!='0',ele_list)
-        lishinumer=0
-        ele_praser=0
-        for i in ele_list:
-            ele=i.find_element_by_class_name('wf_xq_lv')
-            ele_pra=int(re.sub('\W','',ele.text))
-            if ele_pra>ele_praser:
-                ele_praser=ele_pra
-                lishinumer=i.get_attribute('iborrowid')
-        return lishinumer
-    def set_xpath(self,lishinumer):        
-        self.numer_xpath='//*[@id="amountt_%s"]' % lishinumer
-        self.check_xpath='//*[@id="incheck_%s"]' % lishinumer
-        self.ppay_xpath='//*[@id="ppay_%s"]' % lishinumer
-        self.commit_xpath='//*[@id="button_%s"]' % lishinumer
-        self.withdra_class='aj_withdrawalCash_%s' % lishinumer
-        self.time_class='lefttime_%s' % lishinumer
-            
-    def login(self,username,pwd):
+        self.login()
+        self.driver.get('https://jr.yatang.cn/GradRedPacket')
+    def login(self):
         self.driver.get('https://jr.yatang.cn/NewLogin/index/referer/')
         self.driver.switch_to.frame(0)
-        self.wait.visibility('xpath','//*[@id="js-username"]').send_keys(username)
-        
-        self.wait.visibility('xpath','//*[@id="js-password"]').send_keys(pwd)
-        
-        
-        self.wait.clickable('xpath','//*[@id="js-login"]').click()
-        
-        time.sleep(2)
-        login_ele=self.wait.get_ele('xpath','//*[@id="top"]/div[1]/div/div[2]/a[2]')
-            
-        if login_ele.text=='免费注册':
-            self.login(username,pwd)
+        self.wait.visibility('xpath', '//*[@id="js-username"]').send_keys(self.username)
+
+        self.wait.visibility('xpath', '//*[@id="js-password"]').send_keys(self.pwd)
+        select=self.wait.visibility('id','_cache_time')
+        Select(select).select_by_value('7200')
+
+        self.wait.clickable('xpath', '//*[@id="js-login"]').click()
+        sleep(2)
+
+
+        if self.driver.title=='雅堂金融':
+            print('登陆成功')
+
+        else:
+            self.login()
         
 
 
-    def wrrtenum(self,numer):
-        if numer==None:
-            dra_text=self.wait.presence('class',self.withdra_class).text
-            
-            numer=int(float(dra_text.strip('￥').replace(',','')))
-                
-            
-        self.wait.visibility('xpath',self.numer_xpath).send_keys(numer)
         
             
 
 
-    def giter(self,pay_pwd,numer=None):
+    '''def giter(self,pay_pwd,numer=None):
         self.wrrtenum(numer)
         ele=self.wait.clickable('xpath',self.check_xpath)
         ele.click()
@@ -95,39 +73,24 @@ class lishitest:
         commit_ele.click()
         
         check_ele=self.persi_ele('/html/body/div[5]/div/div/div/div[1]/div[1]/b')
-        print(check_ele.text)
+        print(check_ele.text)'''
 
-    def timeset(self,username,pwd):
-        lishinumer=self.lishinum()
-        if lishinumer=='0':
-            tkinter.messagebox.showinfo('报告', '没有可投秒标！')
-            try:
-                sys.exit(0)
-            except:
-                tkinter.messagebox.showinfo('报告', '程序准备退出！')
-            finally:
-                return 2
-        self.set_xpath(lishinumer)
+    def timeset(self):
+
         
         while True:
-            '''now=time.strftime('%Y-%m-%d',time.localtime(time.time()))
-            if now!="2017-08-11":
-                try:
-                    sys.exit(0)
-                except:
-                    tkinter.messagebox.showinfo('报告', '程序已失效！')
-                finally:
-                    return 1'''
+
             self.driver.refresh()
-            login_ele=self.wait.get_ele('xpath','//*[@id="top"]/div[1]/div/div[2]/a[2]')
-            
-            if login_ele.text=='免费注册':
-                self.login(username,pwd)
-                self.driver.get('https://jr.yatang.cn/Financial/welfare')
-            ti_text=self.wait.get_ele('class',self.time_class).text
-            ti_list=ti_text.split(':')
-            ti_sum=int(ti_list[0])*3600+int(ti_list[1])*60+int(ti_list[2])
-            #ti_sum=int(ti_list[2])
+            sleep(1)
+
+            ti_text=self.wait.get_ele('css','body > div.project-move-on > div.grad-container > div > div > div.count-down > div > span').text
+
+
+            ti_list=ti_text.split('天')
+            days=int(ti_list[0])
+            ti_list=ti_list[1].strip().split(':')
+            print(ti_list)
+            ti_sum=(days*24+int(ti_list[0]))*3600+int(ti_list[1])*60+int(ti_list[2])
             print('距离投秒时间还有%d秒' % ti_sum)
             if ti_sum>600:
                 sleep(300)
@@ -149,8 +112,8 @@ class lishitest:
                 continue
             else:
                 break
-        return 0
-def main_go():
+        self.wait.visibility('css','body > div.project-move-on > div.grad-container > div > div > div.count-input-container > input.count-btn')
+'''def main_go():
     plat='Z6NRQGUFOYCRJGFWindows-7-6.1.7601-SP1'
     col_list=loadcol()
     if col_list==0:
@@ -205,8 +168,9 @@ def main_go():
  
     
     b1=Button(root,text="开始抢秒",command=click_on,bg="red",width=15,fg="blue").pack()
-    root.mainloop()
+    root.mainloop()'''
 
 if __name__=='__main__':
-    main_go()
+    hb=lishitest("夜夜难眠","aa123..")
+    hb.timeset()
 

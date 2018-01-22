@@ -10,6 +10,7 @@ from selenium.common.exceptions import NoSuchElementException
 import pickle,threading
 from time_out import waittime
 from tkinter import *
+from img_set import img_set
 import tkinter.messagebox
 import requests,platform,time,sys,os
 
@@ -26,6 +27,7 @@ def loadcol():
 
 #使用requests实现查询第一页期限一个月，待投金额大于X，利率最高的标
 def reque_num(main_num):
+    #print(main_num)
     time.sleep(1.5)
     url='https://jr.yatang.cn/Financial/getAssetList'
     headers={'User-Agent':'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.86 Safari/537.36'}
@@ -40,13 +42,13 @@ def reque_num(main_num):
     t_text=resq.json()['list']
     print(t_text)
     #t_text=json.loads(resq.text)['list']
-    t_text=[i for i in t_text if i['showday']=='1个月' and i['remain'] > main_num and float(i['apr']) >= 5.0]# and i['borrow_type'] != '10']
-
-    apr=0
+    t_text=[i for i in t_text if i['showday']=='1个月' and i['remain'] >= main_num and float(i['apr']) >= 5.0]# and i['borrow_type'] != '10']
+    print(t_text)
+    rema=0
     apr_num=0
     for j in t_text:
-        if float(j['apr'])>apr:
-            apr=float(j['apr'])
+        if int(j['remain'])>rema:
+            rema=int(j['remain'])
             apr_num=j['id']
     
     return apr_num   
@@ -71,7 +73,7 @@ class q_mon(threading.Thread):
         self.driver.get('https://jr.yatang.cn/Financial/asset')
         
         self.driver.maximize_window()
-        self.wait=waittime(self.driver,5)
+        self.wait=waittime(self.driver,20)
         self.login()
     def run(self):
         self.eve.wait()
@@ -89,20 +91,20 @@ class q_mon(threading.Thread):
         self.wait.clickable('xpath', '//*[@id="js-login"]').click()
 
         time.sleep(2)
-        login_ele = self.wait.get_ele('xpath', '//*[@id="top"]/div[1]/div/div[2]/a[2]')
+        '''login_ele = self.wait.get_ele('xpath', '//*[@id="root"]/div/div[1]/div/div[1]/div/div[2]/ul/li[1]/a[2]')
 
         if login_ele and login_ele.text=='免费注册':
             self.login()
-        else:
-            self.msg_var.set('登陆成功')
-            cookie_list=self.driver.get_cookies()
-            if os.path.exists('cookie.yt'):
-                os.remove('cookie.yt')
-            global cookie_dict
-            cookie_dict={}
-            for cookie in cookie_list:
-                if 'name' in cookie and 'value' in cookie:
-                    cookie_dict[cookie['name']]=cookie['value']
+        else:'''
+        self.msg_var.set('登陆成功')
+        cookie_list=self.driver.get_cookies()
+        #if os.path.exists('cookie.yt'):
+            #os.remove('cookie.yt')
+        global cookie_dict
+        cookie_dict={}
+        for cookie in cookie_list:
+            if 'name' in cookie and 'value' in cookie:
+                cookie_dict[cookie['name']]=cookie['value']
 
 
     def q_mont(self):
@@ -113,11 +115,11 @@ class q_mon(threading.Thread):
             self.driver.quit()
             sys.exit(1)
         #检测登录
-        self.msg_var.set("检测登录状态...")
-        login_ele=self.wait.get_ele('xpath','//*[@id="top"]/div[1]/div/div[2]/a[2]')
-        if login_ele.text=='免费注册':
+        '''self.msg_var.set("检测登录状态...")
+        login_ele=self.wait.get_ele('xpath','//*[@id="root"]/div/div[1]/div/div[1]/div/div[2]/ul/li[1]/a[2]')
+        if login_ele and login_ele.text=='免费注册':
             self.msg_var.set("正在准备登录...")
-            self.login()
+            self.login()'''
         self.msg_var.set("正在寻找月标...")
         #循环直到找到为止
         apr_num=0
@@ -148,8 +150,20 @@ class q_mon(threading.Thread):
         self.msg_var.set("抢标成功，\n准备投标中...")
         url='https://jr.yatang.cn/Invest/ViewBorrow/ibid/%s' % apr_num
         self.driver.get(url)
-        mynum=self.wait.visibility('xpath','//*[@id="amountt"]')
-        hbxs_ele=self.wait.visibility('class','hbje_xs')
+        if self.driver.current_url != url:
+            img_set(self.driver)
+            strcommand='tesseract.exe '+"f:/image_code.png "+'f:/inputs -l num'
+            print(strcommand)
+            os.system(strcommand)
+            with open('f:/inputs.txt','r',encoding='UTF-8') as f:
+
+                print(f.readline())
+            time.sleep(5)
+        try:
+            mynum=self.wait.visibility('xpath','//*[@id="amountt"]')
+            hbxs_ele=self.wait.visibility('class','hbje_xs')
+        except Exception:
+            self.q_mont()
 
         if mynum:
             if hbxs_ele:
@@ -226,7 +240,7 @@ class q_mon(threading.Thread):
         
             pay_ele.send_keys(self.paypwd)
             self.wait.clickable('xpath','//*[@id="button"]').click()
-            ti_mm=15
+            ti_mm=5
             while ti_mm>=0:
                 self.msg_var.set('投标已进入队列，\n等待15秒（%d）' % ti_mm)
                 time.sleep(1)
@@ -255,7 +269,7 @@ class lishitest(threading.Thread):
         #self.driver.get('https://jr.yatang.cn/NewLogin/index/referer/')
         self.check_zt=False
         self.driver.maximize_window()
-        self.wait = waittime(self.driver, 5)
+        self.wait = waittime(self.driver, 20)
         self.login()
     def run(self):
         self.eve.wait()
@@ -305,8 +319,9 @@ class lishitest(threading.Thread):
 
         time.sleep(2)
         login_ele = self.wait.get_ele('xpath', '//*[@id="top"]/div[1]/div/div[2]/a[2]')
+        print(login_ele)
 
-        if login_ele.text == '免费注册':
+        if login_ele!=0 and login_ele.text == '免费注册':
             self.login()
         else:
             self.driver.get('https://jr.yatang.cn/Financial/welfare')
@@ -343,7 +358,7 @@ class lishitest(threading.Thread):
                     break
                 else:
                     self.msg_var.set('距离投秒时间还有%d秒，\n%d秒后刷新...' % (ti_sum,timer))
-                    time.sleep(1)
+                    time.sleep(0.95)
                     timer-=1
             except Exception as e:
                 print(e)

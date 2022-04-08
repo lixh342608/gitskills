@@ -17,17 +17,58 @@ class operation_xml(ET.ElementTree):
         parser=ET.XMLParser(target=commentbuilder())
         self.parse(self.xml_file,parser=parser)
         self.root=self.getroot()
-        print(self.root)
     def get_namespace(self):
         namespace=dict([node for _,node in ET.iterparse(self.xml_file,events=["start-ns"])])
-        if not namespace:
-            self.namespace=""
-        else:
-            self.namespace="{%s}" % namespace.get("")
+        self.namespace = ""
+        if namespace.get("") != None:
+            self.namespace = "{%s}" % namespace.get("")
         for ns in namespace:
             ET.register_namespace(ns,namespace[ns])
+    def full_path(self,paths):
+        path_list=paths.split("/")
+        path_list=[self.namespace+path for path in path_list]
+        path="/".join(path_list)
+        return path
+    def findfirstnode(self,paths,parentnode=None):
+        if not parentnode:
+            parentnode=self.root
+        paths=self.full_path(paths)
+        return parentnode.find(paths)
+    def findallnode(self,paths,parentnode=None):
+        if not parentnode:
+            parentnode=self.root
+        paths=self.full_path(paths)
+        return parentnode.findall(paths)
+    def findsinglenode(self,paths,chaildtag=None,text=None,attr_map=None,parentnode=None):
+        if parentnode == None:
+            parentnode=self.root
+        nodes=self.findallnode(paths,parentnode=parentnode)
+        if isinstance(chaildtag,str):
+            for node in nodes:
+                tags=[nd.tag for nd in list(node)]
+                if chaildtag in tags:
+                    return node
+        elif isinstance(text,str):
+            for node in nodes:
+                if text == node.text:
+                    return node
+        elif isinstance(attr_map,dict):
+            attr_set = set(attr_map.items())
+            for node in nodes:
+                node_set = set(node.attrib.items())
+                if attr_set.issubset(node_set):
+                    return node
+        else:
+            return self.findfirstnode(paths,parentnode=parentnode)
+        return None
 
-if __name__ == "__mani__":
-    xmls=operation_xml("neox.xml")
-    print(ET.tostring(xmls.root))
+
+
+
+
+
+if __name__ == "__main__":
+    xmls=operation_xml("log.xml")
+    nodes=xmls.findfirstnode("appender")
+    print([node.tag for node in list(nodes)])
 

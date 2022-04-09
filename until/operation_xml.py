@@ -29,6 +29,12 @@ class operation_xml(ET.ElementTree):
         path_list=[self.namespace+path for path in path_list]
         path="/".join(path_list)
         return path
+    def isincludedict(self,ind,oud):
+        ind_set=set(ind.items())
+        oud_set = set(oud.items())
+        if ind_set.issubset(oud_set):
+            return True
+        return False
     def findfirstnode(self,paths,parentnode=None):
         if not parentnode:
             parentnode=self.root
@@ -53,22 +59,84 @@ class operation_xml(ET.ElementTree):
                 if text == node.text:
                     return node
         elif isinstance(attr_map,dict):
-            attr_set = set(attr_map.items())
             for node in nodes:
-                node_set = set(node.attrib.items())
-                if attr_set.issubset(node_set):
+                if self.isincludedict(attr_map,node.attrib):
                     return node
         else:
             return self.findfirstnode(paths,parentnode=parentnode)
         return None
+    def add_chaildtag(self,tagname,tagtext="",tagattr={},parentnode=None):
+        if not parentnode:
+            parentnode=self.root
+        newchaild=ET.Element(tagname,tagattr)
+        newchaild.text=tagtext
+        parentnode.append(newchaild)
+    def changeattr(self,attrs={},parentnode=None,is_delete=False):
+        if not attrs:
+            return
+        nodelist=parentnode
+        if not parentnode:
+            nodelist=[self.root]
+        elif isinstance(parentnode,str):
+            nodelist=[parentnode]
+        for node in nodelist:
+            for attr in attrs.keys():
+                if is_delete:
+                    if attr in node.attrib.keys():
+                        del node.attrib[attr]
+                else:
+                    node.set(attr,attrs.get(attr))
+    def changetext(self,text="",parentnode=None,is_add=False,is_delete=False):
+        nodelist=parentnode
+        if not parentnode:
+            nodelist=[self.root]
+        elif isinstance(parentnode,str):
+            nodelist=[parentnode]
+        for node in nodelist:
+            if is_add:
+                node.text+=text
+            elif is_delete:
+                node.text=""
+            else:
+                node.text = text
+    def delnode_bytagattr(self,tags=None,parentnode=None,attrs={}):
+        if parentnode == None:
+            parentnode=self.root
+        if not tags:
+            return
+        tags=self.full_path(tags)
+        for childnode in list(parentnode):
+            if childnode.tag == tags and self.isincludedict(attrs,childnode.attrib):
+                    parentnode.remove(childnode)
 
-
-
-
-
+    def prettyXml(self,element, indent="\t", newline="\n", level=0):  # elemnt为传进来的Elment类，参数indent用于缩进，newline用于换行
+        if element:  # 判断element是否有子元素
+            if element.text == None or element.text.isspace():  # 如果element的text没有内容
+                element.text = newline + indent * (level + 1)
+            else:
+                element.text = newline + indent * (level + 1) + element.text.strip() + newline + indent * (level + 1)
+                # else: # 此处两行如果把注释去掉，Element的text也会另起一行
+            # element.text = newline + indent * (level + 1) + element.text.strip() + newline + indent * level
+        temp = list(element)  # 将elemnt转成list
+        for subelement in temp:
+            if temp.index(subelement) < (len(temp) - 1):  # 如果不是list的最后一个元素，说明下一个行是同级别元素的起始，缩进应一致
+                subelement.tail = newline + indent * (level + 1)
+            else:  # 如果是list的最后一个元素， 说明下一行是母元素的结束，缩进应该少一个
+                subelement.tail = newline + indent * level
+            self.prettyXml(subelement, indent, newline, level=level + 1)  # 对子元素进行递归操作
+    def savexml(self):
+        self.prettyXml(self.root)
+        self.write(self.xml_file,encoding="utf-8",xml_declaration=True,method="xml")
+    def __enter__(self):
+        return self
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.savexml()
 
 if __name__ == "__main__":
-    xmls=operation_xml("log.xml")
-    nodes=xmls.findfirstnode("appender")
-    print([node.tag for node in list(nodes)])
+    with operation_xml("log.xml") as xmls:
+        xmls.delnode_bytagattr(tags="appender",attrs={})
+    #xmls=operation_xml("log.xml")
+    #print(xmls.isincludedict({"a":"b"},{}))
+    #nodes=xmls.findsinglenode("appender",attr_map={"name":"DIALOG"})
+    #print(nodes.text)
 

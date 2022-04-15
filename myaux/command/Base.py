@@ -4,19 +4,16 @@ import win32gui
 import pyautogui
 import random
 import os,time
+import aircv
 from pathlib import Path
 from pymouse import PyMouse
 from PIL import Image, ImageGrab
 from aip import AipOcr
 from skimage import io
-import easyocr
-from cnstd import CnStd
-from cnocr import CnOcr
+
 Image.MAX_IMAGE_PIXELS = None
 pyautogui.PAUSE=1
 os.environ['TESSDATA_PREFIX'] = 'C:/Program Files (x86)/Tesseract-OCR/tessdata'
-os.environ["CUDA_VISIBLE_DEVICES"] = "True"
-os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 class Hwnd():
     def get_hwnd_dic(self, hwnd, hwnd_title):
         if "梦幻西游 ONLINE" in win32gui.GetWindowText(hwnd):
@@ -37,18 +34,38 @@ class myBase():
         self.currtpath=currfiletpath.parent
         self.mous=PyMouse()
         self.tmpfilename = os.path.join(self.currtpath, "temp/tmp.png")
+        self.ditu_size={"jianye":(287,142)}
         # 调用百度的识别文字
         APP_ID = '25963522'
         API_KEY = 'RIOFdoDKGXfhHr2uLYVmUG8w'
         SECRET_KEY = 'vnWA7s1WfWsrPwEvkgkiVI7MMxNTjFvw'
         self.client = AipOcr(APP_ID, API_KEY, SECRET_KEY)
-    def grt_num_center(self,num1,num2):
+    def get_num_center(self,num1,num2):
         center_num=abs(num1-num2)//2
         if num1 > num2:
             return num2+center_num
         else:
             return num1+center_num
-
+    def get_filename(self,ptn):
+        """
+        返回一个临时文件
+        :param ptn:
+        :return:
+        """
+        times=time.time()
+        timearray=time.localtime(times)
+        times=time.strftime("%Y%m%d%H%M%S", timearray)
+        return os.path.join(self.currtpath,"temp",ptn+times+".png")
+    def get_snapshot(self):
+        """
+        截取当前屏幕快照，返回临时文件名
+        :param ptn:
+        :return:
+        """
+        filename=self.get_filename("snapshot")
+        im = ImageGrab.grab()
+        im.save(filename)
+        return filename
     def get_parent_size(self):
         print(self.hwnd)
         win32gui.SetForegroundWindow(self.hwnd)
@@ -60,7 +77,7 @@ class myBase():
         self.windowright = right-470
         self.windowbottom = bottom-80
         self.parent_size = (left, top, self.windowright, self.windowbottom)
-        self.dows_center=(self.grt_num_center(left,right),self.grt_num_center(top,bottom))
+        self.dows_center=(self.get_num_center(left,right),self.get_num_center(top,bottom))
     def clear_scene(self):
         self.mous.move(self.dows_center[0],self.dows_center[1])
         time.sleep(1)
@@ -85,8 +102,8 @@ class myBase():
         gridx = grids.x-7
         gridy = grids.y-7
         if scenal:
-            gridx=self.grt_num_center(gridx,self.dows_center[0])
-            gridy = self.grt_num_center(gridy, self.dows_center[1])
+            gridx=self.get_num_center(gridx,self.dows_center[0])
+            gridy = self.get_num_center(gridy, self.dows_center[1])
         #pyautogui.moveTo(gridx,gridy-3)
         print(gridx,gridy-3)
         self.mous.move(int(gridx),int(gridy-8))
@@ -170,24 +187,30 @@ class myBase():
         else:
             point=self.get_pointpic_bybaidu()
         return point
-    def get_pointpic_byeasyocr(self):
-        px,py=self.mous.position()
-        print(px,py)
-        bbox=(px-70,py-80,px+100,py+50)
-        im=ImageGrab.grab(bbox)
-        im.save(self.tmpfilename)
-        time.sleep(1)
-        std = CnStd()
-        cn_ocr = CnOcr()
-        box_info_dic = std.detect(self.tmpfilename)
-        box_info_list=box_info_dic.get('detected_texts')
-        for box_info in box_info_list:
-            print(box_info)
-            cropped_img = box_info['cropped_img']  # 检测出的文本框
-            ocr_res = cn_ocr.ocr_for_single_line(cropped_img)
-            print(ocr_res)
 
-        return ocr_res
+    def get_pic_centerforaircv(self, picfile, confidence=0.6):
+        picdir=picfile.split(".")[0].strip("123456789")+"pic"
+        picpath=os.path.join(self.currtpath,"pic",picdir,picfile)
+        snapshot_pic=self.get_snapshot()
+        bmp = aircv.imread(snapshot_pic)
+        tim = aircv.imread(picpath)
+        result=aircv.find_template(bmp, tim,threshold=confidence)
+        if result:
+            print(result.get("confidence"))
+            rec=result.get('rectangle')
+            #img=Image.open(snapshot_pic)
+            #im=img.crop(rec[0]+rec[-1])
+            #im.save(os.path.join(self.currtpath,"pic.png"))
+            return rec[0]+rec[-1]
+        else:
+            return None
+    def get_pixel_rate(self,sec,bbox):
+        max_grid=self.ditu_size.get(sec)
+        x1,y1,x2,y2=bbox
+        xt=(x2-x1-15)/max_grid[0]
+        yt=(y2-y1-15)/max_grid[1]
+        return (xt,yt)
+
     def positioning(self,scene_name,x,y):
         if scene_name == "jianye":
             picname="jianye1.png"
@@ -195,27 +218,21 @@ class myBase():
             return None
         pyautogui.press("tab")
         time.sleep(2)
-        grids=self.get_pic_center(picname,confidence=0.6)
+        bbox=self.get_pic_centerforaircv(picname)
+        xt,yt=self.get_pixel_rate(scene_name,bbox)
+        minix=bbox[0]
+        maxy=bbox[-1]
+        grids=(minix+int(x*xt)+3,maxy-int(y*yt)-11)
+        print(bbox)
         print(grids)
-        if grids == None:
-            pyautogui.press("tab")
-            time.sleep(2)
-            grids = self.get_pic_center(picname,confidence=0.6)
-        while self.get_pic_center("checkdt1.png",confidence=0.9):
-            pyautogui.moveTo(self.dows_center)
-            #self.mous.move(self.dows_center)
-            quanbu_grid = self.get_pic_center("quanbu1.png", confidence=0.8)
-            if quanbu_grid:
-                print(1111111111111111)
-                quanbu_grid=(quanbu_grid.x+18,quanbu_grid.y-9,)
-                pyautogui.moveTo(quanbu_grid,duration=2)
-                #self.mous.move(int(quanbu_grid.x) + 10, int(quanbu_grid.y - 10))
-                time.sleep(1)
-                pyautogui.click()
-        self.mous.move(int(grids.x),int(grids.y))
-        time.sleep(1)
-        while True:
-            px,py=self.get_pointpic_byeasyocr()
-            print(px,py)
-            break
+        pyautogui.moveTo(grids)
+        time.sleep(2)
+        print(pyautogui.position())
+        #while not self.get_pic_centerforaircv("checkdt2.png",confidence=0.5):
+
+        pyautogui.click()
+
+
+
+
 

@@ -17,4 +17,4 @@ if __name__=="__main__":
         #hwndbase.get_scene()
         #hwndbase.getpic_click("wuyi1.PNG","aswuyi.PNG")
         #hwndbase.getpic_click("wuyidh1.PNG","aswuyi.PNG",check_tag=False,confidence=0.8)
-        hwndbase.positioning("jianye",0,0)
+        hwndbase.positioning("jianye",211,100)

@@ -34,7 +34,7 @@ class myBase():
         currfiletpath = Path(os.path.abspath(__file__))
         self.currtpath=currfiletpath.parent
         self.mous=PyMouse()
-        self.ditu_size={"jianye":(287,142),"donghaiwan":(117,117)}
+        self.ditu_size={"jianye":(287,142),"donghaiwan":(119,119),"changancheng":(548,277),"jiangnanyewai":(159,119)}
         self.yunbiao_par=["牛魔王","观音姐姐","镇元大仙","孙婆婆","地藏王"]
         self.padocr = PaddleOCR(use_angle_cls=True, lang="ch")
         # 调用百度的识别文字
@@ -90,13 +90,15 @@ class myBase():
         pyautogui.press("F9")
         pyautogui.hotkey("alt", "h")
         time.sleep(1)
-    def get_pic_centerforaytogui(self,picfile,confidence=0.6):
+    def get_pic_centerforaytogui(self,picfile,confidence=0.7,is_npc=False):
         """
         根据基准图片获取操作对象位置
         :param picfile: 基准图片
         :param canel: 误差值
         :return: 对像坐标
         """
+        if is_npc:
+            self.clear_scene()
         picpath=self.get_pic_fullpath(picfile)
         grids=pyautogui.locateCenterOnScreen(picpath,confidence=confidence,region=self.parent_size,grayscale=True)
         return grids
@@ -108,59 +110,55 @@ class myBase():
         :return: 对像box
         """
         picpath=self.get_pic_fullpath(picfile)
+        print(picfile,picpath)
         bbox=pyautogui.locateOnScreen(picpath,confidence=confidence,region=self.parent_size,grayscale=True)
         return bbox
-    def get_allpic(self,picfile,confidence=0.6):
+    def get_allpic(self,picfile,confidence=0.6,index=None):
         """
         查找所有相似图片，返回bbox
         """
         picpath = self.get_pic_fullpath(picfile)
-        btm=pyautogui.locateAllOnScreen(picpath,confidence=confidence)
+        btm=pyautogui.locateAllOnScreen(picpath,confidence=confidence,region=self.parent_size,grayscale=True)
+        if index != None:
+            return list(btm)[index]
         return list(btm)
+    def get_interval(self,basic,length):
+        pt=length/3
+        end=basic+pt*2
+        start=basic
+        return range(int(start),int(end))
 
-    def dhclick(self,bbox,scenal=False,pfx=None):
-        gridx = self.get_num_center(bbox.left,bbox.left+bbox.width)
-        gridy = self.get_num_center(bbox.top,bbox.top+bbox.height)
+    def dhclick(self,grids,scenal=False):
+        gridx = grids.x
+        gridy = grids.y
         if scenal:
             if abs(self.dows_center[0] - gridx) < 100:
                 gridx = gridx + 100
             else:
                 gridx=self.get_num_center(gridx,self.dows_center[0])
             gridy = self.get_num_center(gridy, self.dows_center[1])
-        else:
-            gridx = random.choice(range(bbox.left,bbox.left+bbox.width))
-            gridy = random.choice(range(bbox.top,bbox.top+bbox.height))
-        if pfx == "left":
-            gridx-=10
-        elif pfx == "right":
-            gridx+=10
-        elif pfx == "top":
-            gridy -= 10
-        elif pfx == "bom":
-            gridy += 10
-        else:
-            gridx -= 5
-        print("scenal:%s %s ===>> (%s,%s)" % (scenal,bbox,gridx,gridy))
-        pyautogui.moveTo(gridx,gridy)
-        #print(gridx,gridy)
-        #self.mous.move(int(gridx),int(gridy))
+        pyautogui.moveTo(gridx-5,gridy-10)
         time.sleep(1)
         pyautogui.click()
-        #self.mous.click(int(gridx),int(gridy-8),1,1)
         time.sleep(1)
-    def getpic_click(self,picfile,checkfile=None,confidence=0.5,pfx=None):
+    def getpic_click(self,picfile,checkfile=None,confidence=0.7,is_npc=False,check_tag=True):
         if checkfile:
-            while not self.get_pic_centerforaytogui(checkfile):
-                self.clear_scene()
-                bbox=self.get_pic_bbox(picfile,confidence=confidence)
-                if bbox:
-                    self.dhclick(bbox,pfx=pfx)
-                if not self.get_pic_centerforaytogui(checkfile):
-                    self.dhclick(bbox,scenal=True, pfx=pfx)
-
+            if check_tag:
+                while not self.get_pic_centerforaytogui(checkfile):
+                    grids=self.get_pic_centerforaytogui(picfile,confidence=confidence,is_npc=is_npc)
+                    if grids:
+                        self.dhclick(grids)
+                        if not self.get_pic_centerforaytogui(checkfile):
+                            self.dhclick(grids,scenal=True)
+            else:
+                while self.get_pic_centerforaytogui(checkfile):
+                    grids = self.get_pic_centerforaytogui(picfile, confidence=confidence,is_npc=is_npc)
+                    if grids:
+                        self.dhclick(grids)
         else:
-            bbox=self.get_pic_bbox(picfile)
-            self.dhclick(bbox,pfx=pfx)
+            grids=self.get_pic_centerforaytogui(picfile,confidence=confidence,is_npc=is_npc)
+            if grids:
+                self.dhclick(grids)
     def calsimilar(self,imagef1,imagef2):
         """
         图片相似度对比
@@ -184,11 +182,7 @@ class myBase():
     # 百度OCR接口
     def get_pic_text(self,picfile):
         result=self.duqu_yemian(picfile)
-        return str(result)
-        #with open(picfile, 'rb') as fp:
-            #bimg = fp.read()
-            #msg = self.client.basicGeneral(bimg)
-            #return msg
+        return result
     # 获取当前声景
     def get_scene(self):
         tmpfilename=self.get_filename("scene")
@@ -196,10 +190,11 @@ class myBase():
         img=io.imread(tmpfilename,as_gray=False)
         print(img.shape)
         rows,cols,_= img.shape
-        new = img[rows // 15:rows // 7, 0:cols // 6]
+        new = img[rows // 15:rows // 6, 0:cols // 6]
         io.imsave(tmpfilename,new)
-        #io.show()
-        return self.get_pic_text(tmpfilename)
+        scene_text=self.duqu_yemian(tmpfilename)
+        print("当前场景信息：%s" % scene_text[-1])
+        return scene_text[-1]
     # 通过百度接品获取定位
     def get_pointpic_bybaidu(self):
         tmpfilename = self.get_filename("pointpic")
@@ -224,7 +219,7 @@ class myBase():
         if myfile.is_file():
             picpath=pocname
         else:
-            picdir=pocname.strip("123456789")+"pic"
+            picdir=pocname.strip("0123456789")+"pic"
             picpath=os.path.join(self.currtpath,"pic",picdir,pocname+".png")
         return picpath
     def get_pic_foraircv(self, picfile, confidence=0.6):
@@ -244,11 +239,17 @@ class myBase():
     def shear_pic(self,picfile):
         rec,snapshot_pic=self.get_pic_foraircv(picfile)
         bbox=rec[0]+rec[-1]
-        im1=Image.open(snapshot_pic)
+        return self.bbox_pic(bbox,snapshot_pic)
+    def bbox_pic(self,bbox,source_image=None):
+        if source_image == None:
+            source_image=self.get_snapshot()
+        #im_box=(bbox.left,bbox.top,bbox.left+bbox.width,bbox.top+bbox.height)
+        im1=Image.open(source_image)
         im2=im1.crop(bbox)
-        temfile=self.get_filename("renwutmp")
+        temfile = self.get_filename("renwutmp")
         im2.save(temfile)
         return temfile
+
     # 场景与PC的缩方比例
     def get_pixel_rate(self,sec,bbox):
         max_grid=self.ditu_size.get(sec)
@@ -278,14 +279,12 @@ class myBase():
         minix=bbox[0]
         maxy=bbox[-1]
         grids=(minix+int(x*xt),maxy-int(y*yt))
-        print(bbox)
-        print(grids)
         pyautogui.moveTo(grids)
-        time.sleep(2)
+        time.sleep(1)
         print(pyautogui.position())
-        #while not self.get_pic_centerforaircv("checkdt2.png",confidence=0.5):
-
         pyautogui.click()
+        time.sleep(1)
+        pyautogui.press("tab")
     # 使用物品
     def shiyongwupin(self,wupinpic):
         while not self.get_pic_centerforaytogui(wupinpic,confidence=0.8):

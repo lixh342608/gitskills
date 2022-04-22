@@ -32,9 +32,13 @@ class yabiao(myBase):
         #    self.getpic_click("zhonga1",confidence=0.7)
         self.getpic_click("biaoqi3",checkfile="biaoqi4",confidence=0.7)
         while not self.get_pic_centerforaytogui("biaoqi6"):
-            btm = self.get_allpic('biaoqi5',confidence=0.6)
-            self.dhclick(btm[-2])
-        self.getpic_click("biaoqi7",confidence=0.9,pfx="bom")
+            print(666)
+            btm = self.get_allpic('biaoqi5',confidence=0.8)
+            self.dhclick(btm[-1])
+            bbox=btm[-2]
+            im_box=(bbox.left,bbox.top,bbox.left+bbox.width,bbox.top+bbox.height)
+            print(self.bbox_pic(im_box))
+        self.getpic_click("biaoqi7",confidence=0.8,pfx="bom")
         #self.getpic_click("biaoqi5", checkfile="biaoqi6", confidence=0.8)
 
 

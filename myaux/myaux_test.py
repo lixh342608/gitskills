@@ -25,4 +25,4 @@ if __name__=="__main__":
         #yd.changan_jiangnan()
         #yd.jiangnan_jianye()
         #yd.jianye_donghaiwan()
-        yd.kuachengyundong("donghaiwan_aolaiguo")
+        yd.kuachengyundong("huaguoshan_beijuluzhou")

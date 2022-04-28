@@ -41,16 +41,36 @@ class scene_yd(myBase):
                 "yidongproint": [51, 20],
                 "is_yizhan": True
             },
+            "aolaiguo_huaguoshan": {
+                "source_add": "傲来国",
+                "target_add": "花果山",
+                "pic_name": "aolaiguo",
+                "check_name": "aolaiguo1",
+                "yidongproint": [208, 137],
+                "yidongfx": [300, -200]
+            },
+            "huaguoshan_beijuluzhou": {
+                "source_add": "花果山",
+                "target_add": "北俱芦洲",
+                "pic_name": "huaguoshan",
+                "check_name": "huaguoshanyizhan0",
+                "yidongproint": [26, 103],
+                "is_yizhan": True
+            },
         }
-    def changjingforyizhan(self,target_add):
+    def changjingforyizhan(self,target_add,grid,yizhandi=""):
         print("进入驿站操作*******")
-        while target_add not in self.get_scene():
+        while self.diff_ratio(target_add,self.get_scene()[0]) < 0.6:
+            self.xiaozhun_weizhi(grid)
             print("还没到目的地，继续努力")
             while not self.get_pic_centerforaytogui("yizhan61", confidence=0.8):
                 print("没有找到驿站对话图片，开始点击传送人")
                 self.clear_scene()
-                for k in range(6):
-                    pic_name="yizhan%s" % k
+                for k in range(8):
+                    pic_name="%syizhan%s" % (yizhandi,k)
+                    pic_path=self.get_pic_fullpath(pic_name)
+                    if not os.path.exists(pic_path):
+                        break
                     grids = self.get_pic_centerforaytogui(pic_name,confidence=0.8)
                     if grids:
                         print("%s找到传送人位置" % pic_name)
@@ -63,11 +83,11 @@ class scene_yd(myBase):
             self.getpic_click("yizhan71",checkfile="yizhan61",confidence=0.9,check_tag=False)
 
     def changjingfordingdian(self,target_add,check_name):
-        while target_add not in self.get_scene():
+        while self.diff_ratio(target_add,self.get_scene()[0]) < 0.6:
             self.getpic_click(check_name)
     def changjingforfx(self,target_add,proint):
         px, py = proint
-        while target_add not in self.get_scene():
+        while self.diff_ratio(target_add,self.get_scene()[0]) < 0.6:
             self.clear_scene()
             self.yidongfx(px, py)
             time.sleep(1)
@@ -82,13 +102,12 @@ class scene_yd(myBase):
         check_name = kuacheng_dic.get("check_name")
         yidongproint = kuacheng_dic.get("yidongproint")
         is_yizhan=kuacheng_dic.get("is_yizhan")
-        scene=self.get_scene()
-        if source_add not in scene:
+        if self.diff_ratio(source_add,self.get_scene()[0]) < 0.6:
             print("当前场景不是%s" % source_add)
             return
-        tag=scene.split(source_add)[-1]
+        tag=self.get_scene()[-1]
         while True:
-            new_tag=self.get_scene().split(source_add)[-1]
+            new_tag=self.get_scene()[-1]
             if new_tag == tag:
                 if not self.get_pic_centerforaytogui(check_name,is_npc=True):
                     px,py=yidongproint
@@ -99,7 +118,7 @@ class scene_yd(myBase):
                 tag=new_tag
                 time.sleep(2)
         if is_yizhan:
-            self.changjingforyizhan(target_add)
+            self.changjingforyizhan(target_add,yidongproint,pic_name)
         elif kuacheng_dic.get("dingdian_canzhao") != None:
             self.changjingfordingdian(target_add,check_name)
         else:

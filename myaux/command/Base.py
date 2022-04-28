@@ -3,7 +3,7 @@
 import win32gui
 import pyautogui
 import random
-import os,time
+import os,time,re
 import aircv
 from pathlib import Path
 from pymouse import PyMouse
@@ -11,6 +11,7 @@ from PIL import Image, ImageGrab
 from aip import AipOcr
 from skimage import io
 from paddleocr import PaddleOCR
+import difflib
 
 Image.MAX_IMAGE_PIXELS = None
 pyautogui.PAUSE=1
@@ -34,7 +35,7 @@ class myBase():
         currfiletpath = Path(os.path.abspath(__file__))
         self.currtpath=currfiletpath.parent
         self.mous=PyMouse()
-        self.ditu_size={"jianye":(287,142),"donghaiwan":(119,119),"changancheng":(548,277),"jiangnanyewai":(159,119)}
+        self.ditu_size={"jianye":(287,142),"donghaiwan":(119,119),"changancheng":(548,277),"jiangnanyewai":(159,119),"aolaiguo":(222,150),"huaguoshan":(159,119)}
         self.yunbiao_par=["牛魔王","观音姐姐","镇元大仙","孙婆婆","地藏王"]
         self.padocr = PaddleOCR(use_angle_cls=True, lang="ch")
         # 调用百度的识别文字
@@ -152,6 +153,7 @@ class myBase():
                             self.dhclick(grids,scenal=True)
             else:
                 while self.get_pic_centerforaytogui(checkfile):
+                    pyautogui.moveTo(self.dows_center)
                     grids = self.get_pic_centerforaytogui(picfile, confidence=confidence,is_npc=is_npc)
                     if grids:
                         self.dhclick(grids)
@@ -179,6 +181,12 @@ class myBase():
             if gray1[sm] == gray2[sm]:
                 same+=1
         return same*100/len(gray1)
+    def diff_ratio(self,diff1,diff2):
+        if not isinstance(diff1,str) or not isinstance(diff2,str):
+            print("非字符串数据不能比较相似度")
+            return 0
+        res = difflib.SequenceMatcher(None,diff1,diff2)
+        return res.quick_ratio()
     # 百度OCR接口
     def get_pic_text(self,picfile):
         result=self.duqu_yemian(picfile)
@@ -186,15 +194,39 @@ class myBase():
     # 获取当前声景
     def get_scene(self):
         tmpfilename=self.get_filename("scene")
-        pyautogui.screenshot(imageFilename=tmpfilename,region=self.parent_size)
-        img=io.imread(tmpfilename,as_gray=False)
-        print(img.shape)
-        rows,cols,_= img.shape
-        new = img[rows // 15:rows // 6, 0:cols // 6]
-        io.imsave(tmpfilename,new)
-        scene_text=self.duqu_yemian(tmpfilename)
-        print("当前场景信息：%s" % scene_text[-1])
-        return scene_text[-1]
+        left,top=self.parent_size[:2]
+        scene_size=(left,top+70,left+180,top+160)
+        img=ImageGrab.grab(scene_size)
+        img.save(tmpfilename)
+        result = self.padocr.ocr(tmpfilename, cls=True)
+        scene_text = [line[-1][0] for line in result]
+        texts=scene_text[-1]
+        scene="".join(re.findall(r'[\u4e00-\u9fa5]',texts))
+        zuobiao=re.findall(r"\d+",texts.split(scene)[-1][1:])
+        print("当前场景信息：%s %s" % (scene,zuobiao))
+        return [scene,zuobiao]
+    def xiaozhun_weizhi(self,grid):
+        while True:
+            print("位置校准：%s" % grid)
+            _,zb=self.get_scene()
+            if len(zb)!=2:
+                continue
+            if (int(grid[0]) - int(zb[0])) > 10:
+                px = 100
+            elif (int(grid[0]) - int(zb[0])) < -10:
+                px = -100
+            else:
+                px=0
+            if (int(grid[1]) - int(zb[1])) > 10:
+                py = -100
+            elif (int(grid[1]) - int(zb[1])) < -10:
+                py = 100
+            else:
+                py=0
+            if px==py==0:
+                break
+            print("校准值：%s %s" % (px,py))
+            self.yidongfx(px,py)
     # 通过百度接品获取定位
     def get_pointpic_bybaidu(self):
         tmpfilename = self.get_filename("pointpic")
@@ -274,7 +306,7 @@ class myBase():
         pyautogui.press("tab")
         time.sleep(2)
         rec,_=self.get_pic_foraircv(scene_name)
-        bbox=self.suoxiaosource(rec[0])+self.suoxiaosource(rec[-1],lv=0.015,is_add=False)
+        bbox=self.suoxiaosource(rec[0])+self.suoxiaosource(rec[-1],lv=0.01,is_add=False)
         xt,yt=self.get_pixel_rate(scene_name,bbox)
         minix=bbox[0]
         maxy=bbox[-1]

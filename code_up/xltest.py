@@ -9,17 +9,12 @@ import pyautogui
 import difflib
 import time
 print(pyautogui.size())
-time.sleep(5)
-img=pyautogui.position()
-print(img)
-#print(screen)
+while True:
+    img=pyautogui.position()
+    print(img)
+    print(img.x,img.y)
+    time.sleep(1)
 
 
 
-    
-if __name__=="__main__":
-    m=PyMouse()
-    #m.move(30,230)
-    #m.click(30,230,1)
-    #m.click(30, 230, 1,1)
 

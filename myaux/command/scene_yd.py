@@ -53,23 +53,71 @@ class scene_yd(myBase):
                 "source_add": "花果山",
                 "target_add": "北俱芦洲",
                 "pic_name": "huaguoshan",
-                "check_name": "huaguoshanyizhan0",
+                "check_name": "huaguoshantudi0",
                 "yidongproint": [26, 103],
+                "is_yizhan": True,
+                "is_check": True
+            },
+            "beijuluzhou_changshoujiaowai": {
+                "source_add": "北俱芦洲",
+                "target_add": "长寿郊外",
+                "pic_name": "beijuluzhou",
+                "check_name": "beijuluzhoudidungui0",
+                "yidongproint": [196, 10],
+                "is_yizhan": True,
+                "is_check": True
+            },
+            "beijuluzhou_huaguoshan": {
+                "source_add": "北俱芦洲",
+                "target_add": "花果山",
+                "pic_name": "beijuluzhou",
+                "check_name": "beijuluzhoutudi0",
+                "yidongproint": [190, 105],
+                "is_yizhan": True,
+                "is_check": True
+            },
+            "beijuluzhou_changancheng": {
+                "source_add": "北俱芦洲",
+                "target_add": "长安城",
+                "pic_name": "beijuluzhou",
+                "check_name": "beijuluzhouyizhan0",
+                "yidongproint": [45, 119],
+                "is_yizhan": True,
+                "is_check": True
+            },
+            "changshoujiaowai_beijuluzhou": {
+                "source_add": "长寿郊外",
+                "target_add": "北俱芦洲",
+                "pic_name": "changshoujiaowai",
+                "check_name": "changshoujiaowaiyizhan0",
+                "yidongproint": [60, 66],
                 "is_yizhan": True
             },
+            "changshoujiaowai_changshoucun": {
+                "source_add": "长寿郊外",
+                "target_add": "长寿村",
+                "pic_name": "changshoujiaowai",
+                "check_name": "changshoujiaowai1",
+                "yidongproint": [150, 160],
+                "yidongfx": [50, -200]
+            },
+
         }
-    def changjingforyizhan(self,target_add,grid,yizhandi=""):
+    def changjingforyizhan(self,target_add,grid,checkyz):
         print("进入驿站操作*******")
+        checkyz=checkyz.strip("0123456789")
         while self.diff_ratio(target_add,self.get_scene()[0]) < 0.6:
-            self.xiaozhun_weizhi(grid)
+            #self.xiaozhun_weizhi(grid)
             print("还没到目的地，继续努力")
             while not self.get_pic_centerforaytogui("yizhan61", confidence=0.8):
                 print("没有找到驿站对话图片，开始点击传送人")
                 self.clear_scene()
                 for k in range(8):
-                    pic_name="%syizhan%s" % (yizhandi,k)
+                    pic_name="%s%s" % (checkyz,k)
+                    print(pic_name)
                     pic_path=self.get_pic_fullpath(pic_name)
                     if not os.path.exists(pic_path):
+                        self.xiaozhun_weizhi(grid)
                         break
                     grids = self.get_pic_centerforaytogui(pic_name,confidence=0.8)
                     if grids:
@@ -87,7 +135,7 @@ class scene_yd(myBase):
             self.getpic_click(check_name)
     def changjingforfx(self,target_add,proint):
         px, py = proint
-        while self.diff_ratio(target_add,self.get_scene()[0]) < 0.6:
+        while self.diff_ratio(target_add,self.get_scene()[0]) < 0.9:
             self.clear_scene()
             self.yidongfx(px, py)
             time.sleep(1)
@@ -102,6 +150,7 @@ class scene_yd(myBase):
         check_name = kuacheng_dic.get("check_name")
         yidongproint = kuacheng_dic.get("yidongproint")
         is_yizhan=kuacheng_dic.get("is_yizhan")
+        is_check = kuacheng_dic.get("is_check")
         if self.diff_ratio(source_add,self.get_scene()[0]) < 0.6:
             print("当前场景不是%s" % source_add)
             return
@@ -118,7 +167,11 @@ class scene_yd(myBase):
                 tag=new_tag
                 time.sleep(2)
         if is_yizhan:
-            self.changjingforyizhan(target_add,yidongproint,pic_name)
+            if is_check:
+                checkyz=check_name
+            else:
+                checkyz="%syizhan" % pic_name
+            self.changjingforyizhan(target_add,yidongproint,checkyz)
         elif kuacheng_dic.get("dingdian_canzhao") != None:
             self.changjingfordingdian(target_add,check_name)
         else:

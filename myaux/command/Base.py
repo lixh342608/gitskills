@@ -35,7 +35,7 @@ class myBase():
         currfiletpath = Path(os.path.abspath(__file__))
         self.currtpath=currfiletpath.parent
         self.mous=PyMouse()
-        self.ditu_size={"jianye":(287,142),"donghaiwan":(119,119),"changancheng":(548,277),"jiangnanyewai":(159,119),"aolaiguo":(222,150),"huaguoshan":(159,119)}
+        self.ditu_size={"jianye":(287,142),"donghaiwan":(119,119),"changancheng":(548,277),"jiangnanyewai":(159,119),"aolaiguo":(222,150),"huaguoshan":(159,119),"beijuluzhou":(226,169),"changshoujiaowai":(191,167)}
         self.yunbiao_par=["牛魔王","观音姐姐","镇元大仙","孙婆婆","地藏王"]
         self.padocr = PaddleOCR(use_angle_cls=True, lang="ch")
         # 调用百度的识别文字
@@ -138,7 +138,7 @@ class myBase():
             else:
                 gridx=self.get_num_center(gridx,self.dows_center[0])
             gridy = self.get_num_center(gridy, self.dows_center[1])
-        pyautogui.moveTo(gridx-5,gridy-10)
+        pyautogui.moveTo(gridx-5,gridy-5)
         time.sleep(1)
         pyautogui.click()
         time.sleep(1)
@@ -195,14 +195,18 @@ class myBase():
     def get_scene(self):
         tmpfilename=self.get_filename("scene")
         left,top=self.parent_size[:2]
-        scene_size=(left,top+70,left+180,top+160)
+        scene_size=(left,top+80,left+130,top+130)
         img=ImageGrab.grab(scene_size)
         img.save(tmpfilename)
+        time.sleep(1)
         result = self.padocr.ocr(tmpfilename, cls=True)
+        print(result)
         scene_text = [line[-1][0] for line in result]
         texts=scene_text[-1]
         scene="".join(re.findall(r'[\u4e00-\u9fa5]',texts))
-        zuobiao=re.findall(r"\d+",texts.split(scene)[-1][1:])
+        zuobiao=re.findall(r"\d+",texts.split(scene)[-1][1:-1])
+        if len(zuobiao)==1:
+            zuobiao=[zuobiao[0][:-1],zuobiao[0][-1]]
         print("当前场景信息：%s %s" % (scene,zuobiao))
         return [scene,zuobiao]
     def xiaozhun_weizhi(self,grid):
@@ -256,6 +260,7 @@ class myBase():
         return picpath
     def get_pic_foraircv(self, picfile, confidence=0.6):
         picpath=self.get_pic_fullpath(picfile)
+        print(picpath)
         snapshot_pic=self.get_snapshot()
         bmp = aircv.imread(snapshot_pic)
         tim = aircv.imread(picpath)
@@ -311,6 +316,22 @@ class myBase():
         minix=bbox[0]
         maxy=bbox[-1]
         grids=(minix+int(x*xt),maxy-int(y*yt))
+        pyautogui.moveTo(grids)
+        time.sleep(1)
+        print(pyautogui.position())
+        pyautogui.click()
+        time.sleep(1)
+        pyautogui.press("tab")
+
+    def positioningforzb(self, scene_name, x, y):
+        pyautogui.press("tab")
+        time.sleep(2)
+        rec, _ = self.get_pic_foraircv(scene_name)
+        bbox = self.suoxiaosource(rec[0]) + self.suoxiaosource(rec[-1], lv=0.01, is_add=False)
+        xt, yt = self.get_pixel_rate(scene_name, bbox)
+        minix = bbox[0]
+        maxy = bbox[-1]
+        grids = (minix + int(x * xt), maxy - int(y * yt))
         pyautogui.moveTo(grids)
         time.sleep(1)
         print(pyautogui.position())

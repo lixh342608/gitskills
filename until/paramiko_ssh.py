@@ -5,9 +5,10 @@ import paramiko,logging,os,time
 class myParamiko:
     obj=paramiko.SSHClient()
     obj.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    def __init__(self,hostip,username="root",password="123456",port=22,logger=None):
+    def __init__(self,hostip,username="root",password="123456",port=22,logger=None,timeout=300):
         #self.password = self.get_password(password)
         self.logger= logger if logger else logging
+        self.timeout=timeout
         pass_list=self.get_password(password)
         try:
             self.obj.connect(hostip,port,username,password=pass_list[0],pkey=pass_list[1])
@@ -34,7 +35,7 @@ class myParamiko:
     def run_cmdlist(self,cmdlist):
         self.resultList = []
         for cmd in cmdlist:
-            stdin,stdout,stderr = self.obj.exec_command(cmd)
+            stdin,stdout,stderr = self.obj.exec_command(cmd,timeout=self.timeout)
             result=[std.strip().encode("utf-8") for std in stdout.readlines()]
             self.logger.warning("command:{0} exec over as result:{1}".format(cmd,result))
             self.resultList.append(result)

@@ -2,7 +2,7 @@
 
 import logging,subprocess
 from multiprocessing import Process,Queue,Event
-from auto_tool.until_funtion.paramiko_ssh import myParamiko
+from paramiko_ssh import myParamiko
 class ssh_tool:
     def __init__(self,logger=None,logger_name=None):
         self.logger_name=logger_name
